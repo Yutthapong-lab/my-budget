@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>My Budget - Final Fix Tag</title>
+  <title>My Budget - Fixed Layout</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -106,7 +106,7 @@
     .std-input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
     .std-input:disabled { background: #f1f5f9; cursor: not-allowed; color: #94a3b8; }
 
-    /* Category Chips (ในฟอร์ม) */
+    /* Category Chips */
     .category-container {
       display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; 
       background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; min-height: 50px;
@@ -164,7 +164,7 @@
     .btn-refresh:hover { background: #f1f5f9; color: var(--primary); }
     .btn-refresh i { font-size: 20px; }
 
-    /* Table & Tags Fixes */
+    /* Table & Tags */
     .table-wrapper { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; min-width: 900px; }
     thead { background: #f8fafc; }
@@ -172,31 +172,37 @@
     td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; color: #1e293b; }
     tr:hover { background: #f8fafc; }
 
-    /* --- ส่วนที่แก้เพื่อไม่ให้ Tag พัง --- */
-    .tags-wrapper {
-      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-    }
-    .cat-pill {
-      display: inline-block;
-      white-space: nowrap; /* ห้ามตัดคำในปุ่ม */
-      padding: 4px 10px;
-      border-radius: 50px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    /* -------------------------------- */
+    .tags-wrapper { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .cat-pill { display: inline-block; white-space: nowrap; padding: 4px 10px; border-radius: 50px; font-size: 12px; font-weight: 600; }
 
     .badge-method {
       display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px;
       background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-weight: 500; white-space: nowrap;
     }
     
+    /* --- FIX: Action Buttons Layout --- */
+    .action-group {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px; /* ระยะห่างระหว่างปุ่ม */
+    }
+
     .action-btn {
-      width: 36px; height: 36px; border-radius: 10px; border: none;
-      display: inline-flex; align-items: center; justify-content: center;
-      cursor: pointer; margin-right: 6px; transition: 0.2s;
+      /* min-width ช่วยให้ปุ่มยืดขยายได้ถ้าฟอนต์ไม่โหลด */
+      min-width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.2s;
+      padding: 0 8px; /* เพิ่ม padding ให้มีพื้นที่ถ้าเป็นตัวหนังสือ */
     }
     .action-btn i { font-size: 18px; }
+
     .ab-edit { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
     .ab-edit:hover { background: #ffedd5; }
     .ab-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
