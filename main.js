@@ -1,4 +1,4 @@
-// --- main.js (อัปเกรดระบบค้นหาให้หาเจอทุกช่อง) ---
+// --- main.js ---
 import { db } from "./firebase-config.js";
 import { 
     collection, 
@@ -24,7 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMasterData();
     const dateInput = document.getElementById('date');
     if(dateInput) dateInput.valueAsDate = new Date();
+    
+    // เชื่อมต่อ Firebase
     subscribeToFirestore();
+    
+    // ตั้งค่า Event ต่างๆ
     setupEventListeners();
 });
 
@@ -33,12 +37,13 @@ function subscribeToFirestore() {
     const q = query(recordsCol, orderBy("date", "desc"));
     onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        applyFilters();
+        applyFilters(); // ข้อมูลมาใหม่ก็กรองใหม่ทันที
     }, (error) => {
         console.error("Error watching records:", error);
     });
 }
 
+// --- ฟังก์ชันบันทึก ---
 export async function addRecord(rec) {
     try {
         rec.createdAt = serverTimestamp();
@@ -49,13 +54,14 @@ export async function addRecord(rec) {
     }
 }
 
+// --- ฟังก์ชันลบ ---
 window.deleteRecord = async function(id) {
     if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
     try { await deleteDoc(doc(db, "records", id)); } 
     catch (err) { alert("❌ ลบไม่สำเร็จ"); }
 }
 
-// --- Master Data ---
+// --- Master Data (หมวดหมู่/วิธีจ่าย) ---
 async function loadMasterData() {
     const catSelect = document.getElementById("category");
     const methodSelect = document.getElementById("method");
@@ -89,12 +95,12 @@ async function loadMasterData() {
 
 window.changePage = function(delta) { currentPage += delta; renderTable(); }
 
-// --- LOGIC การกรอง (แก้ไขจุดนี้) ---
+// --- LOGIC การค้นหาและกรอง (จุดที่แก้ไขให้แล้ว) ---
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
     const fCat = document.getElementById("filter-category")?.value;
     const fMethod = document.getElementById("filter-method")?.value;
-    // ตัดช่องว่างหน้าหลังออก เพื่อความแม่นยำ
+    // ตัดช่องว่างหน้าหลังออก
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
@@ -102,14 +108,14 @@ function applyFilters() {
         const matchCat = fCat ? r.category === fCat : true;
         const matchMethod = fMethod ? r.method === fMethod : true;
         
-        // --- จุดที่แก้ไข: ค้นหาครอบคลุมทุกฟิลด์ ---
+        // --- ส่วนนี้คือจุดที่ทำให้ค้นหาได้ทุกช่อง ---
         const matchText = fText ? (
-            (r.item || "").toLowerCase().includes(fText) ||       // ชื่อรายการ
-            (r.note || "").toLowerCase().includes(fText) ||       // หมายเหตุ
-            (r.category || "").toLowerCase().includes(fText) ||   // หมวดหมู่
-            (r.method || "").toLowerCase().includes(fText) ||     // วิธีจ่าย
-            (r.income || 0).toString().includes(fText) ||         // ยอดรายรับ (เช่นค้น 500)
-            (r.expense || 0).toString().includes(fText)           // ยอดรายจ่าย
+            (r.item || "").toLowerCase().includes(fText) ||       // ค้นหาในชื่อรายการ
+            (r.note || "").toLowerCase().includes(fText) ||       // ค้นหาในหมายเหตุ
+            (r.category || "").toLowerCase().includes(fText) ||   // ค้นหาในหมวดหมู่
+            (r.method || "").toLowerCase().includes(fText) ||     // ค้นหาในวิธีจ่าย
+            (r.income || 0).toString().includes(fText) ||         // ค้นหาในยอดรายรับ
+            (r.expense || 0).toString().includes(fText)           // ค้นหาในยอดรายจ่าย
         ) : true;
 
         return matchMonth && matchCat && matchMethod && matchText;
@@ -120,6 +126,7 @@ function applyFilters() {
     updateSummary();
 }
 
+// --- แสดงตาราง ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
     if(!tbody) return;
@@ -161,6 +168,7 @@ function renderTable() {
     }
 }
 
+// --- สรุปยอด ---
 function updateSummary() {
     const totalInc = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.income)||0), 0);
     const totalExp = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.expense)||0), 0);
@@ -182,6 +190,7 @@ function formatNumber(num) {
     return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// --- Event Listeners ---
 function setupEventListeners() {
     const form = document.getElementById("entry-form");
     if(form) {
@@ -202,6 +211,7 @@ function setupEventListeners() {
         });
     }
 
+    // ช่องค้นหา: พิมพ์ปุ๊บ ค้นปั๊บ (ใช้ input event)
     const filterText = document.getElementById("filter-text");
     if (filterText) filterText.addEventListener("input", applyFilters);
 
