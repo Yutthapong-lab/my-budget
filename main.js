@@ -4,6 +4,7 @@ import {
     collection, 
     addDoc, 
     deleteDoc, 
+    updateDoc, // เพิ่ม updateDoc เข้ามา
     doc, 
     query, 
     orderBy, 
@@ -16,6 +17,7 @@ import {
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
+let editingId = null; // ตัวแปรเก็บ ID ที่กำลังแก้ไข (ถ้าเป็น null คือโหมดเพิ่มปกติ)
 
 const recordsCol = collection(db, "records"); 
 
@@ -25,42 +27,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dateInput = document.getElementById('date');
     if(dateInput) dateInput.valueAsDate = new Date();
     
-    // เชื่อมต่อ Firebase
     subscribeToFirestore();
-    
-    // ตั้งค่า Event ต่างๆ
     setupEventListeners();
 });
 
-// --- main.js ---
-
+// --- Firebase Real-time ---
 function subscribeToFirestore() {
-    // แก้ไขตรงนี้: เพิ่ม orderBy("createdAt", "desc") เข้าไปอีกตัว
-    // แปลว่า: ให้เรียงตามวันที่ก่อน ถ้าวันที่เท่ากัน ให้เรียงตามเวลาที่บันทึก (ล่าสุดอยู่บน)
+    // เรียงตามวันที่ และ เวลาที่สร้าง (ตามที่คุณทำ Index ไว้)
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
-
+    
     onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         applyFilters(); 
     }, (error) => {
         console.error("Error watching records:", error);
-        
-        // --- เพิ่มข้อความแจ้งเตือนให้กดสร้าง Index ---
-        if (error.code === 'failed-precondition') {
-            alert("⚠️ แจ้งเตือนจาก Firebase:\n\nเนื่องจากมีการเปลี่ยนวิธีเรียงลำดับข้อมูล\nกรุณากดปุ่ม F12 -> ดูแถบ Console -> แล้วคลิกลิงก์ยาวๆ ที่ Firebase แจ้งมาเพื่อสร้าง Index ครับ");
-        }
     });
 }
 
-// --- ฟังก์ชันบันทึก ---
-export async function addRecord(rec) {
+// --- ฟังก์ชันบันทึก (เพิ่ม + แก้ไข) ---
+async function saveRecord(rec) {
     try {
-        rec.createdAt = serverTimestamp(); // บันทึกเวลาปัจจุบันของ Server
-        await addDoc(recordsCol, rec);
-        alert("✅ บันทึกข้อมูลเรียบร้อย");
+        if (editingId) {
+            // --- โหมดแก้ไข (Update) ---
+            // อัปเดตข้อมูลเดิม (ไม่แก้ createdAt เพื่อให้ลำดับเวลาคงเดิม)
+            await updateDoc(doc(db, "records", editingId), rec);
+            
+            alert("✅ แก้ไขข้อมูลเรียบร้อย");
+            
+            // รีเซ็ตสถานะกลับเป็นโหมดปกติ
+            editingId = null;
+            document.querySelector("#entry-form button[type='submit']").textContent = "บันทึกรายการ";
+            document.querySelector("#entry-form button[type='submit']").classList.remove("btn-warning");
+            document.querySelector("#entry-form button[type='submit']").classList.add("btn-primary");
+        } else {
+            // --- โหมดเพิ่มใหม่ (Add) ---
+            rec.createdAt = serverTimestamp(); // ใส่เวลาเฉพาะตอนเพิ่มใหม่
+            await addDoc(recordsCol, rec);
+            alert("✅ บันทึกข้อมูลเรียบร้อย");
+        }
     } catch (err) {
-        alert("❌ บันทึกไม่สำเร็จ: " + err.message);
+        alert("❌ ดำเนินการไม่สำเร็จ: " + err.message);
     }
+}
+
+// --- ฟังก์ชันเตรียมข้อมูลเพื่อแก้ไข (เรียกจากปุ่มในตาราง) ---
+window.editRecord = function(id) {
+    // 1. หาข้อมูลจาก ID
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+
+    // 2. นำข้อมูลไปใส่ในฟอร์ม
+    document.getElementById("date").value = rec.date;
+    document.getElementById("item").value = rec.item;
+    document.getElementById("category").value = rec.category;
+    document.getElementById("method").value = rec.method;
+    document.getElementById("income").value = rec.income || "";
+    document.getElementById("expense").value = rec.expense || "";
+    document.getElementById("note").value = rec.note || "";
+
+    // 3. เปลี่ยนสถานะเป็นโหมดแก้ไข
+    editingId = id;
+
+    // 4. เปลี่ยนหน้าตาปุ่มบันทึก ให้รู้ว่ากำลังแก้
+    const submitBtn = document.querySelector("#entry-form button[type='submit']");
+    submitBtn.textContent = "💾 บันทึกการแก้ไข";
+    submitBtn.classList.remove("btn-primary"); // เอาสีน้ำเงินออก
+    submitBtn.classList.add("btn-warning");    // (ถ้ามี class สีส้ม) หรือจะใช้ style ก็ได้
+    submitBtn.style.backgroundColor = "#f59e0b"; // สีส้ม เพื่อให้รู้ว่าแก้
+
+    // 5. เลื่อนหน้าจอขึ้นไปที่ฟอร์ม
+    document.querySelector(".card-form").scrollIntoView({ behavior: "smooth" });
 }
 
 // --- ฟังก์ชันลบ ---
@@ -70,7 +106,7 @@ window.deleteRecord = async function(id) {
     catch (err) { alert("❌ ลบไม่สำเร็จ"); }
 }
 
-// --- Master Data (หมวดหมู่/วิธีจ่าย) ---
+// --- Master Data ---
 async function loadMasterData() {
     const catSelect = document.getElementById("category");
     const methodSelect = document.getElementById("method");
@@ -104,7 +140,7 @@ async function loadMasterData() {
 
 window.changePage = function(delta) { currentPage += delta; renderTable(); }
 
-// --- LOGIC การค้นหาและกรอง (เหมือนเดิม) ---
+// --- LOGIC การกรอง ---
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
     const fCat = document.getElementById("filter-category")?.value;
@@ -133,7 +169,7 @@ function applyFilters() {
     updateSummary();
 }
 
-// --- แสดงตาราง (แก้ไขส่วนแสดงวันที่) ---
+// --- แสดงตาราง ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
     if(!tbody) return;
@@ -154,15 +190,11 @@ function renderTable() {
         const incomeTxt = r.income > 0 ? formatNumber(r.income) : "-";
         const expenseTxt = r.expense > 0 ? formatNumber(r.expense) : "-";
 
-        // --- ส่วนที่เพิ่ม: แปลงเวลาจาก Firestore Timestamp ---
         let timeStr = "";
         if (r.createdAt && r.createdAt.seconds) {
-            // แปลง Timestamp เป็น Date Object
             const dateObj = new Date(r.createdAt.seconds * 1000);
-            // จัดรูปแบบเป็น HH:mm น.
             timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
         }
-        // ------------------------------------------------
 
         tr.innerHTML = `
             <td>
@@ -175,7 +207,10 @@ function renderTable() {
             <td class="text-right" style="color:${r.expense > 0 ? '#dc2626' : 'inherit'}">${expenseTxt}</td>
             <td>${r.method}</td>
             <td style="font-size:12px; color:#64748b;">${r.note || ""}</td>
-            <td><button class="btn btn-small btn-danger" onclick="window.deleteRecord('${r.id}')">ลบ</button></td>
+            <td>
+               <button class="btn btn-small btn-secondary" onclick="window.editRecord('${r.id}')" style="margin-right:4px;">แก้ไข</button>
+               <button class="btn btn-small btn-danger" onclick="window.deleteRecord('${r.id}')">ลบ</button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -225,9 +260,27 @@ function setupEventListeners() {
                 expense: parseFloat(document.getElementById("expense").value) || 0,
                 note: document.getElementById("note").value
             };
-            addRecord(newRec);
+            
+            // เรียกฟังก์ชัน saveRecord (ซึ่งจะเช็คเองว่า เพิ่ม หรือ แก้ไข)
+            saveRecord(newRec);
+
             form.reset();
             document.getElementById("date").valueAsDate = new Date();
+        });
+
+        // เมื่อกดปุ่ม "ล้าง" ให้ยกเลิกโหมดแก้ไขด้วย
+        form.addEventListener("reset", () => {
+            editingId = null;
+            const submitBtn = document.querySelector("#entry-form button[type='submit']");
+            submitBtn.textContent = "บันทึกรายการ";
+            submitBtn.style.backgroundColor = ""; // คืนสีเดิม
+            submitBtn.classList.remove("btn-warning");
+            submitBtn.classList.add("btn-primary");
+            
+            // คืนค่าวันที่ปัจจุบันหลังจาก reset
+            setTimeout(() => {
+                document.getElementById("date").valueAsDate = new Date();
+            }, 0);
         });
     }
 
@@ -252,4 +305,3 @@ function setupEventListeners() {
         renderTable();
     });
 }
-
