@@ -37,7 +37,7 @@ function subscribeToFirestore() {
     const q = query(recordsCol, orderBy("date", "desc"));
     onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        applyFilters(); // ข้อมูลมาใหม่ก็กรองใหม่ทันที
+        applyFilters(); 
     }, (error) => {
         console.error("Error watching records:", error);
     });
@@ -46,7 +46,7 @@ function subscribeToFirestore() {
 // --- ฟังก์ชันบันทึก ---
 export async function addRecord(rec) {
     try {
-        rec.createdAt = serverTimestamp();
+        rec.createdAt = serverTimestamp(); // บันทึกเวลาปัจจุบันของ Server
         await addDoc(recordsCol, rec);
         alert("✅ บันทึกข้อมูลเรียบร้อย");
     } catch (err) {
@@ -95,12 +95,11 @@ async function loadMasterData() {
 
 window.changePage = function(delta) { currentPage += delta; renderTable(); }
 
-// --- LOGIC การค้นหาและกรอง (จุดที่แก้ไขให้แล้ว) ---
+// --- LOGIC การค้นหาและกรอง (เหมือนเดิม) ---
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
     const fCat = document.getElementById("filter-category")?.value;
     const fMethod = document.getElementById("filter-method")?.value;
-    // ตัดช่องว่างหน้าหลังออก
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
@@ -108,14 +107,13 @@ function applyFilters() {
         const matchCat = fCat ? r.category === fCat : true;
         const matchMethod = fMethod ? r.method === fMethod : true;
         
-        // --- ส่วนนี้คือจุดที่ทำให้ค้นหาได้ทุกช่อง ---
         const matchText = fText ? (
-            (r.item || "").toLowerCase().includes(fText) ||       // ค้นหาในชื่อรายการ
-            (r.note || "").toLowerCase().includes(fText) ||       // ค้นหาในหมายเหตุ
-            (r.category || "").toLowerCase().includes(fText) ||   // ค้นหาในหมวดหมู่
-            (r.method || "").toLowerCase().includes(fText) ||     // ค้นหาในวิธีจ่าย
-            (r.income || 0).toString().includes(fText) ||         // ค้นหาในยอดรายรับ
-            (r.expense || 0).toString().includes(fText)           // ค้นหาในยอดรายจ่าย
+            (r.item || "").toLowerCase().includes(fText) ||       
+            (r.note || "").toLowerCase().includes(fText) ||       
+            (r.category || "").toLowerCase().includes(fText) ||   
+            (r.method || "").toLowerCase().includes(fText) ||     
+            (r.income || 0).toString().includes(fText) ||         
+            (r.expense || 0).toString().includes(fText)           
         ) : true;
 
         return matchMonth && matchCat && matchMethod && matchText;
@@ -126,7 +124,7 @@ function applyFilters() {
     updateSummary();
 }
 
-// --- แสดงตาราง ---
+// --- แสดงตาราง (แก้ไขส่วนแสดงวันที่) ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
     if(!tbody) return;
@@ -147,8 +145,21 @@ function renderTable() {
         const incomeTxt = r.income > 0 ? formatNumber(r.income) : "-";
         const expenseTxt = r.expense > 0 ? formatNumber(r.expense) : "-";
 
+        // --- ส่วนที่เพิ่ม: แปลงเวลาจาก Firestore Timestamp ---
+        let timeStr = "";
+        if (r.createdAt && r.createdAt.seconds) {
+            // แปลง Timestamp เป็น Date Object
+            const dateObj = new Date(r.createdAt.seconds * 1000);
+            // จัดรูปแบบเป็น HH:mm น.
+            timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
+        }
+        // ------------------------------------------------
+
         tr.innerHTML = `
-            <td>${r.date}</td>
+            <td>
+                ${r.date} 
+                <div style="font-size:11px; color:#6b7280; margin-top:2px;">🕒 ${timeStr}</div>
+            </td>
             <td>${r.item}</td>
             <td><span class="pill" style="background:#f1f5f9; color:#475569;">${r.category}</span></td>
             <td class="text-right" style="color:${r.income > 0 ? '#16a34a' : 'inherit'}">${incomeTxt}</td>
@@ -211,7 +222,6 @@ function setupEventListeners() {
         });
     }
 
-    // ช่องค้นหา: พิมพ์ปุ๊บ ค้นปั๊บ (ใช้ input event)
     const filterText = document.getElementById("filter-text");
     if (filterText) filterText.addEventListener("input", applyFilters);
 
