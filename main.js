@@ -1,4 +1,4 @@
-// --- main.js (iOS Pastel Edition) ---
+// --- main.js (Colorful Mobile-First Edition) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -10,7 +10,7 @@ let currentPage = 1;
 let editingId = null;
 const recordsCol = collection(db, "records"); 
 
-// --- Start ---
+// Start
 document.addEventListener('DOMContentLoaded', async () => {
     await loadMasterData();
     const dateInput = document.getElementById('date');
@@ -19,23 +19,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
 });
 
-// --- Pastel Colors Logic ---
+// Color Logic
 function getColorForCategory(name) {
-    // Pastel Palette (Background, Text)
     const palettes = [
-        { bg: "#FFDEE9", text: "#B35B76" }, // Pastel Pink
-        { bg: "#D4FC79", text: "#5D8518" }, // Pastel Green
-        { bg: "#A1C4FD", text: "#3B5C95" }, // Pastel Blue
-        { bg: "#FBC2EB", text: "#914C7A" }, // Pastel Purple
-        { bg: "#F6D365", text: "#96700D" }, // Pastel Yellow/Orange
-        { bg: "#E0C3FC", text: "#6A3A9E" }, // Lavender
-        { bg: "#8EC5FC", text: "#2A5CA1" }  // Sky
+        { bg: "#E0E7FF", text: "#4338CA" }, // Indigo
+        { bg: "#DCFCE7", text: "#15803D" }, // Emerald
+        { bg: "#FFEDD5", text: "#C2410C" }, // Orange
+        { bg: "#FCE7F3", text: "#BE185D" }, // Pink
+        { bg: "#FEF3C7", text: "#B45309" }, // Amber
+        { bg: "#E0F2FE", text: "#0369A1" }, // Sky
+        { bg: "#F3E8FF", text: "#7E22CE" }  // Purple
     ];
     const index = name.charCodeAt(0) % palettes.length;
     return palettes[index];
 }
 
-// --- Firebase ---
+// Firebase
 function subscribeToFirestore() {
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
@@ -48,13 +47,11 @@ async function saveRecord(rec) {
     try {
         if (editingId) {
             await updateDoc(doc(db, "records", editingId), rec);
-            // alert("✅ แก้ไขเรียบร้อย");
             editingId = null;
             resetSubmitButton();
         } else {
             rec.createdAt = serverTimestamp();
             await addDoc(recordsCol, rec);
-            // alert("✅ บันทึกเรียบร้อย");
         }
     } catch (err) { alert("Error: " + err.message); }
 }
@@ -93,15 +90,15 @@ window.editRecord = function(id) {
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
     submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกแก้ไข';
-    submitBtn.classList.add("btn-ios-edit");
+    submitBtn.classList.add("btn-edit-mode");
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function resetSubmitButton() {
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<span class="material-icons-round">check</span> บันทึก';
-    submitBtn.classList.remove("btn-ios-edit");
+    submitBtn.innerHTML = '<span class="material-icons-round">check_circle</span> บันทึกข้อมูล';
+    submitBtn.classList.remove("btn-edit-mode");
 }
 
 async function loadMasterData() {
@@ -140,10 +137,20 @@ window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
+    const fCat = document.getElementById("filter-category")?.value;
+    const fMethod = document.getElementById("filter-method")?.value;
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
+        
+        let matchCat = true;
+        if (fCat) {
+            if (Array.isArray(r.category)) matchCat = r.category.includes(fCat);
+            else matchCat = r.category === fCat;
+        }
+
+        const matchMethod = fMethod ? r.method === fMethod : true;
         const catText = Array.isArray(r.category) ? r.category.join(" ") : (r.category || "");
         
         const matchText = fText ? (
@@ -154,12 +161,12 @@ function applyFilters() {
             (r.income || 0).toString().includes(fText) ||         
             (r.expense || 0).toString().includes(fText)           
         ) : true;
-        return matchMonth && matchText;
+        return matchMonth && matchCat && matchMethod && matchText;
     });
     currentPage = 1; renderList(); updateSummary();
 }
 
-// --- Render List as Cards (Mobile Style) ---
+// --- Render List as Cards ---
 function renderList() {
     const container = document.getElementById("table-body");
     if(!container) return; container.innerHTML = "";
@@ -172,7 +179,7 @@ function renderList() {
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     if(displayItems.length === 0) {
-        container.innerHTML = `<div class="empty-state">ไม่มีรายการ...</div>`;
+        container.innerHTML = `<div class="empty-msg">ไม่มีรายการ...</div>`;
         return;
     }
 
@@ -182,56 +189,53 @@ function renderList() {
             timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // Color Tags
         let catHtml = "";
         const cats = Array.isArray(r.category) ? r.category : [r.category];
         catHtml = cats.map(c => {
             if(!c) return "";
             const color = getColorForCategory(c);
-            return `<span class="tag-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
+            return `<span class="tc-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
         }).join("");
 
         const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "";
         const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "";
 
         const card = document.createElement("div");
-        card.className = "trans-item";
+        card.className = "trans-card";
         card.innerHTML = `
-            <div class="trans-header">
-                <div>
-                   <div class="trans-date">
-                      <span class="material-icons-round" style="font-size:14px;">calendar_today</span> ${r.date} &nbsp; • &nbsp; ${timeStr}
+            <div class="tc-header">
+                <div style="flex:1;">
+                   <div class="tc-date">
+                      <span class="material-icons-round" style="font-size:14px;">event</span> ${r.date} ${timeStr ? '• '+timeStr : ''}
                    </div>
-                   <div class="trans-title">${r.item}</div>
-                   <div class="trans-tags">${catHtml}</div>
+                   <div class="tc-title">${r.item}</div>
+                   <div class="tc-badges">${catHtml}</div>
                 </div>
-                <div style="text-align:right;">
-                   <div style="font-size:11px; color:#999; background:#f0f0f0; padding:2px 8px; border-radius:8px;">${r.method}</div>
+                <div class="action-group">
+                    <button class="btn-icon bi-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">edit</span></button>
+                    <button class="btn-icon bi-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">delete</span></button>
                 </div>
             </div>
 
-            <div class="trans-amounts">
-                <div class="amt-inc">${incVal}</div>
-                <div class="amt-exp">${expVal}</div>
+            <div class="tc-body">
+                <div style="font-size:12px; color:#64748b;">${r.method}</div>
+                <div>
+                    <span class="val-inc">${incVal}</span>
+                    <span class="val-exp">${expVal}</span>
+                </div>
             </div>
 
-            ${r.note ? `<div style="font-size:12px; color:#888;">Note: ${r.note}</div>` : ''}
-
-            <div class="trans-actions">
-                <button class="action-circle act-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:18px;">edit</span></button>
-                <button class="action-circle act-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:18px;">delete</span></button>
-            </div>
+            ${r.note ? `<div class="tc-footer"><div class="tc-note">Note: ${r.note}</div></div>` : ''}
         `;
         container.appendChild(card);
     });
 
-    // Pagination
     const controls = document.getElementById("pagination-controls");
     if(controls) {
         controls.innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:white; width:40px; height:40px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center;"><span class="material-icons-round">chevron_left</span></button>
-        <span style="align-self:center; font-size:13px; color:#888;">${currentPage} / ${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:white; width:40px; height:40px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center;"><span class="material-icons-round">chevron_right</span></button>`;
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:#fff; width:36px; height:36px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b;">chevron_left</span></button>
+        <span style="align-self:center; font-size:13px; color:#A0AEC0;">${currentPage} / ${totalPages}</span>
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:#fff; width:36px; height:36px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b;">chevron_right</span></button>`;
     }
 }
 
@@ -304,8 +308,12 @@ function setupEventListeners() {
     const filterText = document.getElementById("filter-text");
     if(filterText) filterText.addEventListener("input", applyFilters);
     document.getElementById("filter-month")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-category")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-method")?.addEventListener("change", applyFilters);
     document.getElementById("clear-filter")?.addEventListener("click", () => {
         document.getElementById("filter-month").value = "";
+        document.getElementById("filter-category").value = "";
+        document.getElementById("filter-method").value = "";
         if(filterText) filterText.value = "";
         applyFilters();
     });
