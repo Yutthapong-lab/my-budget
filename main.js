@@ -32,14 +32,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
 });
 
-// --- Firebase Real-time ---
+// --- main.js ---
+
 function subscribeToFirestore() {
-    const q = query(recordsCol, orderBy("date", "desc"));
+    // แก้ไขตรงนี้: เพิ่ม orderBy("createdAt", "desc") เข้าไปอีกตัว
+    // แปลว่า: ให้เรียงตามวันที่ก่อน ถ้าวันที่เท่ากัน ให้เรียงตามเวลาที่บันทึก (ล่าสุดอยู่บน)
+    const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
+
     onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         applyFilters(); 
     }, (error) => {
         console.error("Error watching records:", error);
+        
+        // --- เพิ่มข้อความแจ้งเตือนให้กดสร้าง Index ---
+        if (error.code === 'failed-precondition') {
+            alert("⚠️ แจ้งเตือนจาก Firebase:\n\nเนื่องจากมีการเปลี่ยนวิธีเรียงลำดับข้อมูล\nกรุณากดปุ่ม F12 -> ดูแถบ Console -> แล้วคลิกลิงก์ยาวๆ ที่ Firebase แจ้งมาเพื่อสร้าง Index ครับ");
+        }
     });
 }
 
@@ -243,3 +252,4 @@ function setupEventListeners() {
         renderTable();
     });
 }
+
