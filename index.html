@@ -18,19 +18,17 @@
       --bg-app: #F8F9FD;
       --card-bg: #FFFFFF;
       
-      /* Pastel Gradients */
-      --grad-primary: linear-gradient(135deg, #A18CD1 0%, #FBC2EB 100%); /* ม่วง-ชมพู */
-      --grad-income: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); /* เขียว-ฟ้า */
-      --grad-expense: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); /* แดง-ชมพู */
-      --grad-net: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); /* ฟ้าพาสเทล */
+      /* Gradients */
+      --grad-primary: linear-gradient(135deg, #A18CD1 0%, #FBC2EB 100%);
+      --grad-income: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+      --grad-expense: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+      --grad-net: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
 
       --text-main: #4A4A4A;
-      --text-sub: #9B9B9B;
       --input-bg: #F0F2F5;
 
       --radius-box: 24px;
       --radius-btn: 50px;
-      
       --shadow-ios: 0 10px 30px -10px rgba(166, 171, 189, 0.3);
     }
 
@@ -43,14 +41,13 @@
       color: var(--text-main);
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
-      overflow-x: hidden; /* ห้ามเลื่อนซ้ายขวา */
+      overflow-x: hidden;
     }
 
     /* Header */
     .ios-header {
       padding: 20px 24px 10px;
       display: flex; justify-content: space-between; align-items: center;
-      background: transparent;
     }
     .header-title h1 { margin: 0; font-size: 28px; font-weight: 800; color: #4A4A4A; letter-spacing: -0.5px; }
     .header-title p { margin: 0; font-size: 14px; color: #9B9B9B; }
@@ -61,58 +58,47 @@
       display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666;
     }
 
-    /* Container */
+    /* Content */
     .content-area {
-      padding: 0 20px 80px 20px; /* เว้นล่างเยอะหน่อยเผื่อ scroll */
+      padding: 0 20px 80px 20px;
       display: flex; flex-direction: column; gap: 24px;
     }
 
-    /* Stats Widget (แนวนอน Scrollable) */
+    /* Stats Scrollable */
     .stats-scroller {
       display: flex; gap: 16px; overflow-x: auto; 
       padding-bottom: 20px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;
-      scrollbar-width: none; /* Hide scrollbar Firefox */
+      scrollbar-width: none;
     }
     .stats-scroller::-webkit-scrollbar { display: none; }
 
     .widget-card {
-      min-width: 140px; flex: 1;
-      height: 140px;
-      border-radius: var(--radius-box);
-      padding: 16px;
+      min-width: 140px; flex: 1; height: 140px;
+      border-radius: var(--radius-box); padding: 16px;
       display: flex; flex-direction: column; justify-content: space-between;
-      color: white;
-      box-shadow: var(--shadow-ios);
-      position: relative; overflow: hidden;
+      color: white; box-shadow: var(--shadow-ios); position: relative; overflow: hidden;
     }
-    
-    /* Decorative Circle */
     .widget-card::after {
       content: ''; position: absolute; top: -20px; right: -20px;
       width: 80px; height: 80px; background: rgba(255,255,255,0.2);
       border-radius: 50%;
     }
-
     .widget-income { background: var(--grad-income); }
     .widget-expense { background: var(--grad-expense); }
     .widget-net { background: var(--grad-net); }
-
     .w-label { font-size: 13px; font-weight: 500; opacity: 0.9; }
     .w-val { font-size: 22px; font-weight: 700; word-break: break-all; }
     .w-icon { font-size: 24px; opacity: 0.8; }
 
     /* Form Card */
     .ios-card {
-      background: var(--card-bg);
-      border-radius: var(--radius-box);
-      padding: 24px;
-      box-shadow: var(--shadow-ios);
+      background: var(--card-bg); border-radius: var(--radius-box);
+      padding: 24px; box-shadow: var(--shadow-ios);
     }
     .card-head {
       display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
     }
     .card-title { font-size: 18px; font-weight: 700; color: #555; display: flex; align-items: center; gap: 8px; }
-    
     .setting-link {
       font-size: 12px; color: #999; text-decoration: none; display: flex; align-items: center; gap: 4px;
       background: #f5f5f5; padding: 4px 10px; border-radius: 12px;
@@ -120,71 +106,65 @@
 
     /* Inputs */
     .form-stack { display: flex; flex-direction: column; gap: 16px; }
-    
     .input-group label {
       font-size: 13px; color: #888; margin-bottom: 8px; display: block; font-weight: 500; margin-left: 4px;
     }
     .ios-input {
-      width: 100%; padding: 16px;
-      background: var(--input-bg);
-      border: none; border-radius: 16px;
-      font-size: 16px; color: #333; font-family: inherit;
+      width: 100%; padding: 16px; background: var(--input-bg);
+      border: none; border-radius: 16px; font-size: 16px; color: #333; font-family: inherit;
       transition: 0.2s;
     }
     .ios-input:focus { background: #fff; box-shadow: 0 0 0 2px #C2E9FB; }
     
-    /* Money Inputs */
     .inp-green { color: #2ecc71; font-weight: 600; background: #E8F8F5; }
     .inp-red { color: #e74c3c; font-weight: 600; background: #FDEDEC; }
     
-    /* Select Multiple */
     select[multiple] { height: 120px; }
     select[multiple] option { padding: 10px; border-radius: 10px; margin-bottom: 4px; font-size: 14px; }
-    select[multiple] option:checked {
-      background: #E0E7FF; color: #5D5FEF; font-weight: 600;
-    }
+    select[multiple] option:checked { background: #E0E7FF; color: #5D5FEF; font-weight: 600; }
 
     /* Buttons */
     .btn-ios-primary {
-      width: 100%; padding: 18px; border: none;
-      background: var(--grad-primary);
-      color: white; font-size: 16px; font-weight: 700;
-      border-radius: var(--radius-btn);
+      width: 100%; padding: 18px; border: none; background: var(--grad-primary);
+      color: white; font-size: 16px; font-weight: 700; border-radius: var(--radius-btn);
       box-shadow: 0 8px 20px -5px rgba(161, 140, 209, 0.5);
       cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;
-      transition: transform 0.1s;
     }
     .btn-ios-primary:active { transform: scale(0.98); }
+    .btn-ios-edit { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%) !important; box-shadow: 0 8px 20px -5px rgba(253, 160, 133, 0.5) !important; }
+    .btn-ios-ghost { background: transparent; border: 1px solid #ddd; color: #999; padding: 12px; width: 100%; border-radius: var(--radius-btn); margin-top: 12px; }
 
-    .btn-ios-edit {
-      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%) !important;
-      box-shadow: 0 8px 20px -5px rgba(253, 160, 133, 0.5) !important;
+    /* --- Filter Area (Updated) --- */
+    .filter-container {
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
     }
-
-    .btn-ios-ghost {
-      background: transparent; border: 1px solid #ddd; color: #999;
-      padding: 12px; width: 100%; border-radius: var(--radius-btn); margin-top: 12px;
+    .filter-row-1 {
+      display: flex; gap: 10px;
     }
-
-    /* Table List Style (เปลี่ยนตารางเป็น Card List) */
-    .list-container {
-      display: flex; flex-direction: column; gap: 16px;
+    .filter-row-2 {
+      display: flex; gap: 10px;
     }
     
-    .filter-box {
-      display: flex; gap: 10px; margin-bottom: 10px;
-    }
     .search-pill {
       flex: 1; background: white; border-radius: 50px; padding: 10px 16px;
       display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     }
-    .search-pill input { border: none; width: 100%; font-size: 14px; color: #555; }
-    
-    /* Transaction Card Item */
+    .search-pill input { border: none; width: 100%; font-size: 14px; color: #555; background:transparent; }
+
+    /* Dropdown Filter Style */
+    .ios-select-sm {
+      flex: 1; background: white; border: none; border-radius: 12px;
+      padding: 10px 12px; font-size: 13px; color: #555;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03); -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 8px center; background-size: 12px;
+    }
+
+    /* List Card */
+    .list-container { display: flex; flex-direction: column; gap: 16px; }
     .trans-item {
       background: white; border-radius: 20px; padding: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-      display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 12px;
       position: relative; overflow: hidden;
     }
     .trans-header { display: flex; justify-content: space-between; align-items: flex-start; }
@@ -194,16 +174,11 @@
     .trans-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
     .tag-pill { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
 
-    .trans-amounts {
-      display: flex; justify-content: space-between; align-items: center;
-      background: #F9FAFB; padding: 10px 14px; border-radius: 12px;
-    }
+    .trans-amounts { display: flex; justify-content: space-between; align-items: center; background: #F9FAFB; padding: 10px 14px; border-radius: 12px; }
     .amt-inc { color: #2ecc71; font-weight: 700; font-size: 15px; }
     .amt-exp { color: #e74c3c; font-weight: 700; font-size: 15px; }
 
-    .trans-actions {
-      display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px;
-    }
+    .trans-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
     .action-circle {
       width: 36px; height: 36px; border-radius: 50%; border: none;
       display: flex; align-items: center; justify-content: center;
@@ -211,11 +186,7 @@
     }
     .act-edit { background: #FFF4E5; color: #FFA726; }
     .act-del { background: #FFEBEE; color: #EF5350; }
-
-    /* Empty state */
     .empty-state { text-align: center; color: #ccc; margin-top: 20px; font-weight: 300; }
-
-    /* Footer */
     .ios-footer { text-align: center; color: #ccc; font-size: 11px; margin-top: 20px; }
 
   </style>
@@ -237,39 +208,23 @@
 
     <div class="stats-scroller">
       <div class="widget-card widget-income">
-        <div class="w-top">
-          <span class="material-icons-round w-icon">arrow_downward</span>
-          <div class="w-label">รายรับ</div>
-        </div>
+        <div class="w-top"><span class="material-icons-round w-icon">arrow_downward</span><div class="w-label">รายรับ</div></div>
         <div class="w-val" id="sum-income">0.00</div>
       </div>
-
       <div class="widget-card widget-expense">
-        <div class="w-top">
-          <span class="material-icons-round w-icon">arrow_upward</span>
-          <div class="w-label">รายจ่าย</div>
-        </div>
+        <div class="w-top"><span class="material-icons-round w-icon">arrow_upward</span><div class="w-label">รายจ่าย</div></div>
         <div class="w-val" id="sum-expense">0.00</div>
       </div>
-
       <div class="widget-card widget-net">
-        <div class="w-top">
-          <span class="material-icons-round w-icon">account_balance_wallet</span>
-          <div class="w-label">คงเหลือ</div>
-        </div>
+        <div class="w-top"><span class="material-icons-round w-icon">account_balance_wallet</span><div class="w-label">คงเหลือ</div></div>
         <div class="w-val" id="sum-net">0.00</div>
       </div>
     </div>
 
     <section class="ios-card">
       <div class="card-head">
-        <div class="card-title">
-          <span class="material-icons-round" style="color:#A18CD1;">add_circle</span>
-          บันทึกใหม่
-        </div>
-        <a href="manage.html" class="setting-link">
-          <span class="material-icons-round" style="font-size:14px;">settings</span> หมวดหมู่
-        </a>
+        <div class="card-title"><span class="material-icons-round" style="color:#A18CD1;">add_circle</span> บันทึกใหม่</div>
+        <a href="manage.html" class="setting-link"><span class="material-icons-round" style="font-size:14px;">settings</span> หมวดหมู่</a>
       </div>
 
       <form id="entry-form" class="form-stack">
@@ -277,19 +232,16 @@
           <label>วันที่</label>
           <input type="date" id="date" class="ios-input" required>
         </div>
-
         <div class="input-group">
           <label>รายการ</label>
           <input type="text" id="item" class="ios-input" placeholder="เช่น ค่ากาแฟ..." required>
         </div>
-
         <div class="input-group">
           <label>หมวดหมู่ (เลือกได้หลายข้อ)</label>
           <select id="category" class="ios-input" multiple required>
             <option value="">Loading...</option>
           </select>
         </div>
-        
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
           <div class="input-group">
              <label style="color:#2ecc71;">รายรับ (+)</label>
@@ -300,22 +252,17 @@
              <input type="number" id="expense" class="ios-input inp-red" placeholder="0.00" min="0" step="0.01">
           </div>
         </div>
-
         <div class="input-group">
           <label>วิธีจ่าย</label>
           <select id="method" class="ios-input" required>
              <option value="">Loading...</option>
           </select>
         </div>
-
         <div class="input-group">
           <label>โน้ตช่วยจำ</label>
           <input type="text" id="note" class="ios-input" placeholder="...">
         </div>
-
-        <button type="submit" class="btn-ios-primary">
-          <span class="material-icons-round">check</span> บันทึก
-        </button>
+        <button type="submit" class="btn-ios-primary"><span class="material-icons-round">check</span> บันทึก</button>
         <button type="reset" class="btn-ios-ghost">ล้างค่า</button>
       </form>
     </section>
@@ -325,37 +272,36 @@
         รายการล่าสุด
       </div>
 
-      <div class="filter-box">
-        <input type="month" id="filter-month" class="ios-input" style="width:auto; padding:10px;">
-        <div class="search-pill">
-           <span class="material-icons-round" style="color:#ccc;">search</span>
-           <input type="text" id="filter-text" placeholder="ค้นหา...">
+      <div class="filter-container">
+        <div class="filter-row-1">
+          <input type="month" id="filter-month" class="ios-input" style="width:auto; padding:10px; border-radius:12px; background:white; font-size:13px;">
+          <div class="search-pill">
+             <span class="material-icons-round" style="color:#ccc;">search</span>
+             <input type="text" id="filter-text" placeholder="ค้นหา...">
+          </div>
+          <button id="clear-filter" style="background:white; border:none; border-radius:50%; width:44px; height:44px; flex-shrink:0; box-shadow:0 2px 10px rgba(0,0,0,0.05); color:#999;">
+             <span class="material-icons-round">refresh</span>
+          </button>
         </div>
-        <div style="display:none;">
-           <select id="filter-category"></select>
-           <select id="filter-method"></select>
+
+        <div class="filter-row-2">
+           <select id="filter-category" class="ios-select-sm"></select>
+           <select id="filter-method" class="ios-select-sm"></select>
         </div>
-        <button id="clear-filter" style="background:white; border:none; border-radius:50%; width:44px; box-shadow:0 2px 10px rgba(0,0,0,0.05); color:#999;">
-           <span class="material-icons-round">refresh</span>
-        </button>
       </div>
 
       <div id="table-body" class="list-container">
          </div>
 
-      <div id="pagination-controls" style="display:flex; justify-content:center; gap:12px; margin-top:24px;">
-      </div>
+      <div id="pagination-controls" style="display:flex; justify-content:center; gap:12px; margin-top:24px;"></div>
       <select id="page-size" style="display:none;"><option value="10" selected>10</option></select>
-
     </section>
 
     <footer class="ios-footer">
       Copyright © 2024 Yutthapong R.<br>Design for iOS Experience
     </footer>
-
   </div>
 
   <script type="module" src="main.js"></script>
-
 </body>
 </html>
