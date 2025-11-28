@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>My Budget - Colorful</title>
+  <title>My Budget - Animated</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
 
@@ -13,25 +13,11 @@
 
   <style>
     :root {
-      /* --- Colorful Palette --- */
-      --primary: #6C5DD3;       /* ม่วงสดใส */
-      --primary-soft: #F2F0FF;
-      
-      --accent-pink: #FF8F8F;
-      --accent-green: #4ADE80;
-      --accent-blue: #60A5FA;
-      --accent-yellow: #FCD34D;
-      
-      --bg-body: #F0F2F5;
-      --card-bg: #FFFFFF;
-      
-      --text-main: #2D3748;
-      --text-sub: #A0AEC0;
-      
-      --shadow-card: 0 8px 24px rgba(149, 157, 165, 0.1);
-      --shadow-float: 0 12px 30px rgba(108, 93, 211, 0.25);
-      
-      --radius-std: 20px;
+      --primary: #6366f1;
+      --text-main: #334155;
+      --text-muted: #94a3b8;
+      --radius-app: 24px;
+      --radius-input: 12px;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
@@ -39,165 +25,173 @@
     body {
       margin: 0; padding: 0;
       font-family: "Kanit", sans-serif;
-      /* พื้นหลังแบบไล่สีสวยๆ (สำหรับจอใหญ่) */
-      background: linear-gradient(135deg, #E0C3FC 0%, #8EC5FC 100%);
       color: var(--text-main);
       min-height: 100vh;
-      display: flex; justify-content: center; /* จัดกึ่งกลาง */
+      display: flex;
+      justify-content: center;
+      align-items: center; /* จัดกึ่งกลางจอคอม */
+      
+      /* --- Animated Background --- */
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
     }
 
-    /* --- App Container (หัวใจสำคัญของความสวยบนจอคอม) --- */
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* --- App Container (Glassmorphism) --- */
     .app-layout {
       width: 100%;
-      max-width: 500px; /* ล็อคความกว้างไม่ให้ยืดเกินไป */
-      background: #FAFAFA;
-      min-height: 100vh;
-      position: relative;
-      box-shadow: 0 0 50px rgba(0,0,0,0.1); /* เงาให้ดูลอยๆ */
+      max-width: 480px; /* ขนาดมือถือสวยๆ */
+      height: 100vh;      /* เต็มความสูง */
+      max-height: 100vh;  /* ห้ามเกินหน้าจอ */
+      background: rgba(255, 255, 255, 0.92); /* สีขาวโปร่งแสง */
+      backdrop-filter: blur(10px); /* เบลอฉากหลัง */
+      box-shadow: 0 20px 50px rgba(0,0,0,0.2);
       display: flex; flex-direction: column;
+      overflow-y: auto; /* ให้ scroll ได้เฉพาะในกล่องนี้ */
+      position: relative;
+    }
+
+    /* บน PC ให้กล่องดูลอยๆ มีขอบมน */
+    @media (min-width: 500px) {
+      .app-layout {
+        height: 90vh; /* ไม่เต็มจอคอม */
+        border-radius: var(--radius-app);
+        max-height: 850px;
+      }
+      /* ซ่อน Scrollbar สวยๆ */
+      .app-layout::-webkit-scrollbar { width: 6px; }
+      .app-layout::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     }
 
     /* --- Header --- */
     .app-header {
-      background: #fff;
-      padding: 20px 24px 10px;
+      padding: 20px 20px 10px;
+      background: rgba(255,255,255,0.8);
       position: sticky; top: 0; z-index: 50;
-      border-bottom-left-radius: 24px;
-      border-bottom-right-radius: 24px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
     }
     
     .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .app-title { font-size: 24px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-    .weather-badge {
-      background: #FEF3C7; color: #D97706; padding: 6px 12px; border-radius: 50px;
-      font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px;
-    }
+    .app-brand { font-size: 20px; font-weight: 800; background: -webkit-linear-gradient(45deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 6px; }
+    
+    .weather-pill { font-size: 12px; background: #fff; padding: 4px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: #64748b; font-weight: 500; display:flex; gap:4px; align-items:center; }
 
-    /* Stats Scroll (แนวนอน) */
-    .stats-wrapper {
-      display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;
-      scrollbar-width: none; /* Hide scrollbar */
-    }
-    .stats-wrapper::-webkit-scrollbar { display: none; }
-
+    /* Stats Cards */
+    .stats-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+    .stats-row::-webkit-scrollbar { display: none; }
+    
     .stat-card {
-      min-width: 130px; flex: 1; height: 100px;
-      border-radius: 16px; padding: 14px;
-      display: flex; flex-direction: column; justify-content: space-between;
-      color: white; position: relative; overflow: hidden;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
+      flex: 1; min-width: 100px;
+      background: #fff; border-radius: 16px; padding: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center;
+      border: 1px solid #f1f5f9; position: relative; overflow: hidden;
     }
-    .stat-card:hover { transform: translateY(-3px); }
+    .stat-card::after { content:''; position: absolute; width:40px; height:40px; border-radius:50%; opacity:0.1; top:-10px; right:-10px; }
     
-    /* Patterns */
-    .stat-card::before { content:''; position:absolute; width:60px; height:60px; background:rgba(255,255,255,0.2); border-radius:50%; top:-10px; right:-10px; }
-    
-    .bg-income { background: linear-gradient(135deg, #4ADE80 0%, #22C55E 100%); }
-    .bg-expense { background: linear-gradient(135deg, #FF8F8F 0%, #F43F5E 100%); }
-    .bg-net { background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%); }
-    
-    .stat-label { font-size: 12px; opacity: 0.9; font-weight: 500; }
-    .stat-value { font-size: 20px; font-weight: 700; }
+    .sc-inc::after { background: #22c55e; }
+    .sc-exp::after { background: #ef4444; }
+    .sc-net::after { background: #3b82f6; }
 
-    /* --- Content Body --- */
-    .app-body { padding: 20px; display: flex; flex-direction: column; gap: 24px; }
+    .st-lbl { font-size: 11px; color: var(--text-muted); }
+    .st-val { font-size: 16px; font-weight: 700; margin-top: 2px; }
 
-    /* Form Section */
-    .section-title { font-size: 16px; font-weight: 700; color: #4A5568; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-    
-    .form-card {
-      background: #fff; border-radius: var(--radius-std); padding: 20px;
-      box-shadow: var(--shadow-card);
+    /* --- Body Content --- */
+    .app-body { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* --- Form Compact Style --- */
+    .form-box {
+      background: #fff; padding: 16px; border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
     }
-    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .settings-btn { font-size: 12px; color: var(--text-sub); text-decoration: none; display: flex; align-items: center; gap: 4px; background: #F7FAFC; padding: 4px 10px; border-radius: 8px; }
+    .box-title { font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .setting-link { font-size: 12px; color: #6366f1; text-decoration: none; background: #eef2ff; padding: 2px 8px; border-radius: 6px; }
 
-    .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    /* Grid Layout for Compact Form */
+    .form-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-bottom: 10px; }
+    .form-full { grid-column: span 2; }
     
-    .nice-input {
-      width: 100%; padding: 12px 14px; border-radius: 12px; border: 2px solid transparent;
-      background: #F4F5F7; color: var(--text-main); font-size: 14px; font-family: inherit; transition: 0.2s; margin-bottom: 12px;
+    .inp-std {
+      width: 100%; padding: 10px 12px; font-size: 13px; border-radius: var(--radius-input);
+      border: 1px solid #e2e8f0; background: #f8fafc; font-family: inherit; transition: 0.2s;
     }
-    .nice-input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(108, 93, 211, 0.1); }
+    .inp-std:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1); }
     
-    /* Money Inputs */
-    .inp-inc { background: #F0FDF4; color: #166534; font-weight: 600; }
-    .inp-inc:focus { border-color: #22C55E; }
-    .inp-exp { background: #FEF2F2; color: #991B1B; font-weight: 600; }
-    .inp-exp:focus { border-color: #EF4444; }
+    .inp-inc { background: #f0fdf4; color: #15803d; font-weight: 600; border: 1px solid #bbf7d0; }
+    .inp-exp { background: #fef2f2; color: #b91c1c; font-weight: 600; border: 1px solid #fecaca; }
 
-    /* Multi-select */
-    select[multiple] { height: 100px; padding: 6px; }
-    select[multiple] option { padding: 8px; border-radius: 8px; margin-bottom: 4px; font-size: 13px; }
-    select[multiple] option:checked { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+    /* Select Multiple Compact */
+    select[multiple] { height: 70px; padding: 4px; font-size: 12px; }
+    select[multiple] option { padding: 6px; border-radius: 6px; margin-bottom: 2px; }
+    select[multiple] option:checked { background: #eef2ff; color: var(--primary); font-weight: 600; border-left: 3px solid var(--primary); }
 
     /* Buttons */
-    .btn-main {
-      width: 100%; padding: 14px; border: none; border-radius: 14px;
-      background: var(--primary); color: white; font-size: 16px; font-weight: 600;
-      box-shadow: var(--shadow-float); cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: 0.2s;
-    }
-    .btn-main:active { transform: scale(0.98); }
-    .btn-edit-mode { background: #F59E0B; box-shadow: 0 12px 30px rgba(245, 158, 11, 0.3); }
+    .btn-group { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; margin-top: 10px; }
     
-    .btn-ghost {
-      width: 100%; padding: 10px; border: 1px solid #E2E8F0; background: transparent;
-      border-radius: 14px; color: var(--text-sub); margin-top: 10px; cursor: pointer;
+    .btn-save {
+      background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none;
+      padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); transition: 0.2s;
+    }
+    .btn-save:active { transform: scale(0.98); }
+    .btn-edit-mode { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+
+    .btn-clear {
+      background: #f1f5f9; color: #64748b; border: none; border-radius: 12px; cursor: pointer; font-weight: 500; font-size: 13px;
     }
 
     /* --- List Section --- */
-    .filter-area { background: #fff; padding: 12px; border-radius: 16px; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-    .filter-row { display: flex; gap: 8px; }
-    
-    .search-pill {
-      flex: 1; background: #F4F5F7; border-radius: 50px; padding: 0 12px; display: flex; align-items: center; gap: 6px;
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-box {
+      flex: 1; position: relative;
     }
-    .search-pill input { border: none; background: transparent; width: 100%; padding: 10px 0; font-size: 13px; }
-    .icon-gray { color: #A0AEC0; font-size: 18px; }
+    .search-box input {
+      padding-left: 32px; border-radius: 50px; border: none; background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .search-icon { position: absolute; left: 10px; top: 10px; font-size: 16px; color: #cbd5e1; }
+    
+    .month-picker { width: auto; border-radius: 50px; border: none; background: #fff; font-size: 12px; padding: 0 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
 
-    .dropdown-pill {
-      border: none; background: #F4F5F7; border-radius: 12px; padding: 0 10px; font-size: 12px; color: #4A5568; height: 40px; flex: 1;
+    .trans-list { display: flex; flex-direction: column; gap: 10px; }
+    
+    .t-card {
+      background: #fff; padding: 12px 16px; border-radius: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02); transition: 0.2s;
     }
+    .t-card:hover { transform: translateX(2px); }
+    
+    .t-left { display: flex; flex-direction: column; gap: 2px; }
+    .t-date { font-size: 10px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+    .t-title { font-size: 14px; font-weight: 600; color: #1e293b; }
+    .t-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+    .t-pill { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
 
-    /* List Items */
-    .trans-list { display: flex; flex-direction: column; gap: 12px; }
+    .t-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .val-plus { color: #15803d; font-weight: 700; font-size: 14px; }
+    .val-minus { color: #b91c1c; font-weight: 700; font-size: 14px; }
     
-    .trans-card {
-      background: #fff; padding: 16px; border-radius: 18px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid #f0f0f0;
-      display: flex; flex-direction: column; gap: 8px;
-      transition: 0.2s;
+    .action-row { display: flex; gap: 6px; margin-top: 2px; }
+    .btn-act {
+      width: 24px; height: 24px; border-radius: 6px; border: none; 
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
     }
-    .trans-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+    .ba-edit { background: #fff7ed; color: #f97316; }
+    .ba-del { background: #fef2f2; color: #ef4444; }
 
-    .tc-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .tc-date { font-size: 12px; color: #A0AEC0; display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
-    .tc-title { font-size: 16px; font-weight: 600; color: #2D3748; }
-    
-    .tc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .tc-pill { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
-    
-    .tc-body { 
-      background: #F9FAFB; border-radius: 12px; padding: 8px 12px; 
-      display: flex; justify-content: space-between; align-items: center; margin-top: 6px;
-    }
-    .val-inc { color: #22C55E; font-weight: 700; }
-    .val-exp { color: #EF4444; font-weight: 700; }
-    
-    .tc-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
-    .tc-note { font-size: 12px; color: #718096; font-style: italic; }
-    
-    .action-group { display: flex; gap: 8px; }
-    .btn-icon {
-      width: 32px; height: 32px; border-radius: 10px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;
-    }
-    .bi-edit { background: #FFF7ED; color: #F97316; }
-    .bi-del { background: #FEF2F2; color: #EF4444; }
+    /* Footer */
+    .footer { text-align: center; font-size: 10px; color: #cbd5e1; margin-top: 20px; }
 
-    .empty-msg { text-align: center; color: #CBD5E0; margin: 30px 0; }
-    .footer-txt { text-align: center; color: #CBD5E0; font-size: 11px; margin-top: 30px; margin-bottom: 10px; }
+    /* Hidden elements */
+    .hidden { display: none; }
 
   </style>
 </head>
@@ -207,111 +201,101 @@
   
   <header class="app-header">
     <div class="header-top">
-      <div class="app-title">
-        <span class="material-icons-round">account_balance_wallet</span> My Budget
+      <div class="app-brand">
+        <span class="material-icons-round">donut_small</span> My Budget
       </div>
-      <div class="weather-badge">
-        <span>☀️</span> 32°C
+      <div class="weather-pill">
+        <span>🌤️</span> 32°
       </div>
     </div>
-    
-    <div class="stats-wrapper">
-      <div class="stat-card bg-income">
-        <div class="stat-label">รายรับ</div>
-        <div class="stat-value" id="sum-income">0.00</div>
-        <span class="material-icons-round" style="position:absolute; bottom:10px; right:10px; opacity:0.3;">arrow_downward</span>
+
+    <div class="stats-row">
+      <div class="stat-card sc-inc">
+        <div class="st-lbl">รายรับ</div>
+        <div class="st-val" style="color:#16a34a" id="sum-income">0.00</div>
       </div>
-      <div class="stat-card bg-expense">
-        <div class="stat-label">รายจ่าย</div>
-        <div class="stat-value" id="sum-expense">0.00</div>
-        <span class="material-icons-round" style="position:absolute; bottom:10px; right:10px; opacity:0.3;">arrow_upward</span>
+      <div class="stat-card sc-exp">
+        <div class="st-lbl">รายจ่าย</div>
+        <div class="st-val" style="color:#dc2626" id="sum-expense">0.00</div>
       </div>
-      <div class="stat-card bg-net">
-        <div class="stat-label">คงเหลือ</div>
-        <div class="stat-value" id="sum-net">0.00</div>
-        <span class="material-icons-round" style="position:absolute; bottom:10px; right:10px; opacity:0.3;">savings</span>
+      <div class="stat-card sc-net">
+        <div class="st-lbl">คงเหลือ</div>
+        <div class="st-val" style="color:#2563eb" id="sum-net">0.00</div>
       </div>
     </div>
   </header>
 
   <div class="app-body">
     
-    <section>
-      <div class="section-title">
-        <span class="material-icons-round" style="color:var(--primary);">edit</span> บันทึกรายการ
+    <section class="form-box">
+      <div class="box-title">
+        <span>บันทึกรายการ</span>
+        <a href="manage.html" class="setting-link">จัดการหมวดหมู่</a>
       </div>
-      
-      <div class="form-card">
-        <div class="form-header">
-          <span style="font-size:12px; color:#A0AEC0;">กรอกข้อมูลด้านล่าง</span>
-          <a href="manage.html" class="settings-btn">
-            <span class="material-icons-round" style="font-size:14px;">tune</span> จัดการหมวดหมู่
-          </a>
+
+      <form id="entry-form">
+        <div class="form-grid">
+          <input type="date" id="date" class="inp-std" required>
+          <input type="text" id="item" class="inp-std" placeholder="ชื่อรายการ..." required>
         </div>
 
-        <form id="entry-form">
-          <div class="input-row">
-            <input type="date" id="date" class="nice-input" required>
-            <input type="text" id="item" class="nice-input" placeholder="ชื่อรายการ..." required>
-          </div>
-
-          <select id="category" class="nice-input" multiple required style="height:80px;">
+        <div style="margin-bottom:10px;">
+          <select id="category" class="inp-std" multiple required>
             <option value="">กำลังโหลด...</option>
           </select>
-          <div style="font-size:11px; color:#A0AEC0; margin-top:-8px; margin-bottom:12px; text-align:right;">* เลือกได้หลายข้อ</div>
+          <div style="font-size:10px; text-align:right; color:#94a3b8; margin-top:2px;">* เลือกได้หลายข้อ</div>
+        </div>
 
-          <div class="input-row">
-            <input type="number" id="income" class="nice-input inp-inc" placeholder="รายรับ (+)" min="0" step="0.01">
-            <input type="number" id="expense" class="nice-input inp-exp" placeholder="รายจ่าย (-)" min="0" step="0.01">
-          </div>
+        <div class="form-grid">
+          <input type="number" id="income" class="inp-std inp-inc" placeholder="รายรับ (+)" min="0" step="0.01">
+          <input type="number" id="expense" class="inp-std inp-exp" placeholder="รายจ่าย (-)" min="0" step="0.01">
+        </div>
 
-          <div class="input-row">
-             <select id="method" class="nice-input" required>
-               <option value="">วิธีจ่าย...</option>
-             </select>
-             <input type="text" id="note" class="nice-input" placeholder="หมายเหตุ">
-          </div>
+        <div class="form-grid">
+          <select id="method" class="inp-std" required>
+            <option value="">วิธีจ่าย...</option>
+          </select>
+          <input type="text" id="note" class="inp-std" placeholder="หมายเหตุ">
+        </div>
 
-          <button type="submit" class="btn-main">
-            <span class="material-icons-round">check_circle</span> บันทึกข้อมูล
+        <div class="btn-group">
+          <button type="submit" class="btn-save">
+            <span class="material-icons-round" style="font-size:18px;">check</span> บันทึก
           </button>
-          <button type="reset" class="btn-ghost">ล้างค่า</button>
-        </form>
-      </div>
+          <button type="reset" class="btn-clear">ล้าง</button>
+        </div>
+      </form>
     </section>
 
     <section>
-      <div class="section-title">
-        <span class="material-icons-round" style="color:var(--primary);">history</span> รายการล่าสุด
+      <div class="box-title" style="margin-bottom:8px; padding:0 4px;">รายการล่าสุด</div>
+      
+      <div class="filter-bar">
+        <div class="search-box">
+          <span class="material-icons-round search-icon">search</span>
+          <input type="text" id="filter-text" class="inp-std" placeholder="ค้นหา...">
+        </div>
+        <input type="month" id="filter-month" class="month-picker">
+        <button id="clear-filter" style="width:36px; border:none; background:#fff; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.05); color:#94a3b8; cursor:pointer;">
+           <span class="material-icons-round" style="font-size:18px;">refresh</span>
+        </button>
       </div>
 
-      <div class="filter-area">
-        <div class="filter-row">
-           <div class="search-pill">
-             <span class="material-icons-round icon-gray">search</span>
-             <input type="text" id="filter-text" placeholder="ค้นหา...">
-           </div>
-           <button id="clear-filter" style="width:40px; border-radius:50%; border:none; background:#F4F5F7; color:#A0AEC0; cursor:pointer;">
-             <span class="material-icons-round">refresh</span>
-           </button>
-        </div>
-        <div class="filter-row">
-           <input type="month" id="filter-month" class="dropdown-pill" style="max-width:130px;">
-           <select id="filter-category" class="dropdown-pill"></select>
-           <select id="filter-method" class="dropdown-pill"></select>
-        </div>
+      <div class="hidden">
+        <select id="filter-category"></select>
+        <select id="filter-method"></select>
       </div>
 
       <div id="table-body" class="trans-list">
         </div>
 
       <div id="pagination-controls" style="display:flex; justify-content:center; gap:10px; margin-top:20px;"></div>
-      <select id="page-size" style="display:none;"><option value="10" selected>10</option></select>
+      <select id="page-size" class="hidden"><option value="10" selected>10</option></select>
 
     </section>
 
-    <div class="footer-txt">
-      Copyright © 2024 Yutthapong R. All rights reserved.
+    <div class="footer">
+      © 2024 Yutthapong R. (Cloud Edition)
     </div>
   </div>
 </div>
