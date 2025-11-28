@@ -1,4 +1,4 @@
-// --- main.js ---
+// --- main.js (Final Version) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, 
@@ -7,44 +7,50 @@ import {
     doc, 
     query, 
     orderBy, 
-    onSnapshot,
+    onSnapshot, 
+    getDocs,
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-import { getDocs } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
-
-// ตัวแปร Global
+// --- ตัวแปร Global ---
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
+
+// อ้างอิง Collection ใน Firestore
 const recordsCol = collection(db, "records"); 
 
+// --- เริ่มทำงานเมื่อโหลดหน้าเว็บ ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. โหลด Master Data
+    // 1. โหลดข้อมูลหมวดหมู่และวิธีจ่าย (Master Data)
     await loadMasterData();
 
-    // 2. ตั้งค่าวันที่ปัจจุบัน
+    // 2. ตั้งค่าวันที่ในฟอร์มเป็นวันปัจจุบัน
     const dateInput = document.getElementById('date');
     if(dateInput) dateInput.valueAsDate = new Date();
 
-    // 3. เชื่อมต่อ Firebase (Real-time)
+    // 3. เชื่อมต่อ Firebase เพื่อดึงรายการแบบ Real-time
     subscribeToFirestore();
 
-    // 4. ผูกปุ่มกดและช่องค้นหา (แก้ไขใหม่)
+    // 4. ตั้งค่าปุ่มกดและช่องค้นหาต่างๆ
     setupEventListeners();
 });
 
-// --- Firebase: Subscribe ข้อมูลรายรับรายจ่าย ---
+// --- ส่วนจัดการ Firebase (รายการรับ-จ่าย) ---
+
+// ฟังก์ชันดึงข้อมูลแบบ Real-time (ข้อมูลเปลี่ยน ตารางเปลี่ยนทันที)
 function subscribeToFirestore() {
+    // ดึงข้อมูลโดยเรียงจากวันที่ล่าสุดก่อน
     const q = query(recordsCol, orderBy("date", "desc"));
 
     onSnapshot(q, (snapshot) => {
+        // แปลงข้อมูลจาก Firestore เป็น Array ของเรา
         allRecords = snapshot.docs.map(d => ({ 
             id: d.id, 
             ...d.data() 
         }));
         
-        // เมื่อข้อมูลใหม่มา ให้กรองและแสดงผลทันที
+        // เมื่อข้อมูลมาใหม่ ให้สั่งกรองและแสดงผลทันที
         applyFilters();
     }, (error) => {
         console.error("Error watching records:", error);
@@ -53,10 +59,10 @@ function subscribeToFirestore() {
     });
 }
 
-// --- Firebase: Add Record ---
+// ฟังก์ชันเพิ่มรายการใหม่
 export async function addRecord(rec) {
     try {
-        rec.createdAt = serverTimestamp();
+        rec.createdAt = serverTimestamp(); // เก็บเวลาที่บันทึกจริง
         await addDoc(recordsCol, rec);
         alert("✅ บันทึกข้อมูลเรียบร้อย");
     } catch (err) {
@@ -65,7 +71,7 @@ export async function addRecord(rec) {
     }
 }
 
-// --- Firebase: Delete Record ---
+// ฟังก์ชันลบรายการ (ต้องผูกกับ window เพื่อให้ HTML เรียกใช้ได้)
 window.deleteRecord = async function(id) {
     if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
     try {
@@ -76,13 +82,14 @@ window.deleteRecord = async function(id) {
     }
 }
 
-// --- Master Data (หมวดหมู่ / วิธีจ่าย) ---
+// --- ส่วนจัดการ Master Data (หมวดหมู่ / วิธีจ่าย) ---
 async function loadMasterData() {
     const catSelect = document.getElementById("category");
     const methodSelect = document.getElementById("method");
     const filterCat = document.getElementById("filter-category");
     const filterMethod = document.getElementById("filter-method");
 
+    // ฟังก์ชันช่วยสร้าง <option>
     const fillOptions = (elements, items) => {
         elements.forEach(el => {
             if (!el) return;
@@ -96,19 +103,23 @@ async function loadMasterData() {
     };
 
     try {
+        // ดึงหมวดหมู่
         const catSnapshot = await getDocs(collection(db, "categories"));
         let categories = [];
         catSnapshot.forEach(doc => categories.push(doc.data().name));
-        categories.sort();
+        categories.sort(); // เรียงก-ฮ
 
+        // ดึงวิธีจ่าย
         const methodSnapshot = await getDocs(collection(db, "methods"));
         let methods = [];
         methodSnapshot.forEach(doc => methods.push(doc.data().name));
         methods.sort();
 
+        // ค่า Default กรณีไม่มีข้อมูลในฐานข้อมูล
         if (categories.length === 0) categories = ["อาหาร", "เดินทาง", "ช้อปปิ้ง", "เงินเดือน", "อื่นๆ"];
         if (methods.length === 0) methods = ["เงินสด", "โอนเงิน", "บัตรเครดิต"];
 
+        // เติมใส่ Dropdown ทั้งหน้าฟอร์มและหน้ากรอง
         fillOptions([catSelect, filterCat], categories);
         fillOptions([methodSelect, filterMethod], methods);
     } catch (error) {
@@ -116,13 +127,13 @@ async function loadMasterData() {
     }
 }
 
-// --- Pagination ---
+// --- ฟังก์ชันเปลี่ยนหน้า (Pagination) ---
 window.changePage = function(delta) {
     currentPage += delta;
     renderTable();
 }
 
-// --- Core Logic: Apply Filters ---
+// --- ฟังก์ชันหลัก: กรองและค้นหาข้อมูล ---
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
     const fCat = document.getElementById("filter-category")?.value;
@@ -130,11 +141,14 @@ function applyFilters() {
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
+        // กรองเดือน
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
+        // กรองหมวดหมู่
         const matchCat = fCat ? r.category === fCat : true;
+        // กรองวิธีจ่าย
         const matchMethod = fMethod ? r.method === fMethod : true;
         
-        // ค้นหาทั้งใน ชื่อรายการ (item) และ หมายเหตุ (note)
+        // ค้นหาข้อความ (ทั้งในชื่อรายการ และ หมายเหตุ)
         const matchText = fText ? (
             (r.item || "").toLowerCase().includes(fText) || 
             (r.note || "").toLowerCase().includes(fText)
@@ -143,17 +157,19 @@ function applyFilters() {
         return matchMonth && matchCat && matchMethod && matchText;
     });
 
+    // รีเซ็ตกลับไปหน้า 1 ทุกครั้งที่มีการค้นหา/กรอง
     currentPage = 1;
     renderTable();
     updateSummary();
 }
 
-// --- Render Table ---
+// --- ฟังก์ชันแสดงผลตาราง ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
     if(!tbody) return;
     tbody.innerHTML = "";
 
+    // คำนวณ Pagination
     const pageSizeEl = document.getElementById("page-size");
     const pageSize = pageSizeEl ? parseInt(pageSizeEl.value) : 10;
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
@@ -165,6 +181,7 @@ function renderTable() {
     const end = start + pageSize;
     const displayItems = filteredRecords.slice(start, end);
 
+    // วาดแต่ละแถว
     displayItems.forEach(r => {
         const tr = document.createElement("tr");
         const incomeTxt = r.income > 0 ? formatNumber(r.income) : "-";
@@ -188,6 +205,7 @@ function renderTable() {
     renderPaginationControls(totalPages, filteredRecords.length);
 }
 
+// --- ฟังก์ชันแสดงปุ่มเปลี่ยนหน้า ---
 function renderPaginationControls(totalPages, totalItems) {
     const container = document.getElementById("pagination-controls");
     if(!container) return;
@@ -198,6 +216,7 @@ function renderPaginationControls(totalPages, totalItems) {
     container.innerHTML = html;
 }
 
+// --- ฟังก์ชันสรุปยอดเงิน ---
 function updateSummary() {
     const totalInc = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.income)||0), 0);
     const totalExp = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.expense)||0), 0);
@@ -215,13 +234,14 @@ function updateSummary() {
     }
 }
 
+// --- ฟังก์ชันจัดรูปแบบตัวเลข (มีลูกน้ำ และทศนิยม 2 ตำแหน่ง) ---
 function formatNumber(num) {
     return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// --- Setup Event Listeners (แก้ไขส่วนนี้) ---
+// --- ตั้งค่า Event Listeners ---
 function setupEventListeners() {
-    // 1. Form Submit
+    // 1. เมื่อกดบันทึกรายการ
     const form = document.getElementById("entry-form");
     if(form) {
         form.addEventListener("submit", (e) => {
@@ -241,19 +261,18 @@ function setupEventListeners() {
         });
     }
 
-    // 2. Filter Inputs (ทำให้พิมพ์แล้วค้นหาทันที)
+    // 2. ตั้งค่าช่องค้นหา (ให้ทำงานทันทีเมื่อพิมพ์ - Realtime Search)
     const filterText = document.getElementById("filter-text");
     if (filterText) {
-        // ใช้ event 'input' เพื่อให้ทำงานทันทีที่พิมพ์
-        filterText.addEventListener("input", applyFilters);
+        filterText.addEventListener("input", applyFilters); // ใช้ input event แทน change
     }
 
-    // 3. Dropdowns (เปลี่ยนแล้วค้นหาทันที)
+    // 3. ตั้งค่า Dropdown กรองข้อมูล (เปลี่ยนปุ๊บ กรองปั๊บ)
     document.getElementById("filter-month")?.addEventListener("change", applyFilters);
     document.getElementById("filter-category")?.addEventListener("change", applyFilters);
     document.getElementById("filter-method")?.addEventListener("change", applyFilters);
 
-    // 4. ปุ่มค้นหา (เผื่อคนอยากกด) และปุ่มล้าง
+    // 4. ปุ่มกรอง และ ปุ่มล้างค่า
     document.getElementById("apply-filter")?.addEventListener("click", applyFilters);
     document.getElementById("clear-filter")?.addEventListener("click", () => {
         document.getElementById("filter-month").value = "";
@@ -263,7 +282,7 @@ function setupEventListeners() {
         applyFilters();
     });
 
-    // 5. Page Size
+    // 5. เปลี่ยนจำนวนรายการต่อหน้า
     document.getElementById("page-size")?.addEventListener("change", () => {
         currentPage = 1;
         renderTable();
