@@ -2,247 +2,486 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>บันทึกรายรับรายจ่าย (Cloud)</title>
+  <title>My Budget - บันทึกรายรับรายจ่าย</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <style>
-    /* CSS Style เดิม */
-    :root { --card-bg: #ffffff; --card-border: #e5e7eb; --accent: #2563eb; --danger: #ef4444; --text-main: #0f172a; --text-muted: #6b7280; --radius-xl: 22px; --radius-md: 10px; --shadow-soft: 0 18px 40px rgba(148, 163, 184, 0.22); }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: "Kanit", sans-serif; font-size: 16px; line-height: 1.6; background: radial-gradient(circle at top, #fce7f3 0, #eff6ff 40%, #ecfeff 70%, #fef9c3 100%); color: var(--text-main); min-height: 100vh; }
-    .bg-orb { position: fixed; border-radius: 999px; pointer-events: none; filter: blur(40px); opacity: 0.25; mix-blend-mode: soft-light; z-index: 0; }
-    .orb1 { width: 420px; height: 420px; top: -120px; left: -60px; background: radial-gradient(circle at 30% 30%, #fb7185, #fb923c); animation: floatOrb1 30s ease-in-out infinite alternate; }
-    .orb2 { width: 380px; height: 380px; top: 40%; right: -140px; background: radial-gradient(circle at 30% 30%, #38bdf8, #a855f7); animation: floatOrb2 34s ease-in-out infinite alternate; }
-    .orb3 { width: 280px; height: 280px; top: 78%; left: 12%; background: radial-gradient(circle at 30% 30%, #facc15, #38bdf8); animation: floatOrb3 32s ease-in-out infinite alternate; }
-    @keyframes floatOrb1 { from {transform:translate3d(0,0,0) scale(1);} to {transform:translate3d(40px,40px,0) scale(1.07);} }
-    @keyframes floatOrb2 { from {transform:translate3d(0,0,0) scale(1);} to {transform:translate3d(-50px,-20px,0) scale(1.04);} }
-    @keyframes floatOrb3 { from {transform:translate3d(0,0,0) scale(0.96);} to {transform:translate3d(30px,-30px,0) scale(1.02);} }
-    .topbar { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(14px); background: rgba(255, 255, 255, 0.94); border-bottom: 1px solid rgba(226, 232, 240, 0.9); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
-    .topbar-inner { max-width: 1100px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .brand { display:flex; align-items:center; gap:10px; }
-    .brand-logo { width: 32px; height: 32px; border-radius: 12px; background: radial-gradient(circle at 30% 20%, #bfdbfe, #6366f1); display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:700; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28); }
-    .brand-text-title { font-size: 18px; font-weight: 600; }
-    .brand-text-sub { font-size: 13px; color: var(--text-muted); }
-    .topbar-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-    .topbar-link { border-radius:999px; padding:7px 13px; font-size:13px; border:1px solid #d1d5db; color:var(--text-main); text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#f9fafb; transition:0.15s; white-space:nowrap; }
-    .topbar-link:hover { background:#eef2ff; border-color:#c7d2fe; transform:translateY(-1px); box-shadow:0 10px 22px rgba(148, 163, 184, 0.4); }
-    .content { flex:1; max-width:1100px; margin:16px auto 24px auto; padding:0 16px 24px; display:flex; flex-direction:column; gap:16px; }
-    .card { position:relative; background:var(--card-bg); border-radius:var(--radius-xl); border:1px solid var(--card-border); padding:18px 20px 16px; box-shadow:var(--shadow-soft); overflow:hidden; }
-    .card::before { content:""; position:absolute; inset:-80px; opacity:0.06; background: radial-gradient(circle at 0 0, #93c5fd 0, transparent 55%), radial-gradient(circle at 100% 0, #a5b4fc 0, transparent 55%); pointer-events:none; }
-    .card-inner { position:relative; z-index:1; }
-    .card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; }
-    .card-title { font-size:16px; font-weight:600; }
-    .card-subtitle { font-size:13px; color:var(--text-muted); }
-    .summary-bar { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; font-size:13px; }
-    .summary-item { border-radius:999px; padding:4px 9px; background:#eef2ff; border:1px solid #e0e7ff; font-size:12px; }
-    .card-form { backdrop-filter: blur(10px); background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,246,255,0.96)); border: 1px solid rgba(191, 219, 254, 0.9); }
-    .card-form .card-header { margin-bottom: 16px; }
-    .form-tag { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: #eef2ff; border: 1px solid #e0e7ff; color: #4f46e5; }
-    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
-    .field { display:flex; flex-direction:column; gap:4px; min-width:0; }
-    .field label { font-size:13px; color:var(--text-muted); }
-    .field-note { grid-column: span 2; }
-    .field-actions { grid-column: span 2; align-self: flex-end; justify-self: flex-end; text-align: right; }
-    input, select, textarea { border-radius:var(--radius-md); border:1px solid #d1d5db; padding:7px 9px; font-family:inherit; font-size:13px; background:rgba(255,255,255,0.98); outline:none; transition:0.16s; }
-    input:focus, select:focus, textarea:focus { border-color:#2563eb; box-shadow:0 0 0 1px rgba(37, 99, 235, 0.25); background:#ffffff; }
-    textarea { resize:vertical; min-height:32px; }
-    .btn-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:flex-end; }
-    .btn { border-radius:999px; border:none; font-size:13px; padding:7px 13px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:500; transition:0.15s; white-space:nowrap; }
-    .btn-primary { background:var(--accent); color:#ffffff; box-shadow:0 10px 25px rgba(37,99,235,0.45); }
-    .btn-primary:hover { background:#1d4ed8; transform:translateY(-1px); }
-    .btn-secondary { background:rgba(15,23,42,0.04); color:#111827; }
-    .btn-secondary:hover { background:rgba(15,23,42,0.08); }
-    .btn-danger { background:var(--danger); color:#ffffff; box-shadow:0 10px 22px rgba(239,68,68,0.35); }
-    .btn-danger:hover { background:#dc2626; transform:translateY(-1px); }
-    .btn-small { font-size:12px; padding:4px 9px; }
-    .row { display:flex; flex-wrap:wrap; gap:10px 12px; margin-bottom:8px; }
-    .table-wrapper { overflow-x:auto; border-radius:16px; border:1px solid #e5e7eb; background:linear-gradient(to bottom,#f9fafb,#ffffff); }
-    table { width:100%; border-collapse:collapse; font-size:13px; min-width:880px; }
-    th, td { padding:8px 10px; border-bottom:1px solid #e5e7eb; text-align:left; white-space:nowrap; }
-    th { font-weight:600; font-size:13px; color:#4b5563; }
-    tbody tr:nth-child(even) { background:#f9fafb; }
-    tbody tr:hover { background:#eef2ff; }
-    .text-right { text-align:right; }
-    .pill { display:inline-block; border-radius:999px; padding:2px 8px; font-size:12px; font-weight:500; }
-    .table-footer-row { margin-top:8px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; font-size:12px; }
-    #pagination-controls { display:inline-flex; flex-wrap:nowrap; gap:6px; align-items:center; justify-content:flex-end; font-size:12px; }
-    #pagination-controls button { border-radius:999px; border:1px solid #d1d5db; background:#ffffff; padding:4px 8px; font-size:12px; cursor:pointer; }
-    #pagination-controls button:hover:not(:disabled) { background:#eef2ff; }
-    #pagination-controls button:disabled { opacity:0.4; cursor:default; }
-    @media (max-width:1000px){ .form-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } .field-note { grid-column: span 3; } .field-actions { grid-column: span 3; justify-self:flex-start; } }
-    @media (max-width:768px){ .content{padding:0 10px 20px;} .card{padding:14px 12px; border-radius:18px;} table{font-size:13px; min-width:720px;} th,td{padding:6px 8px;} .brand-text-title{font-size:16px;} .form-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-    @media (max-width:540px){ .form-grid { grid-template-columns: 1fr; } .field-note, .field-actions { grid-column: span 1; } .btn-row { justify-content:flex-start; } }
+    :root {
+      /* Color Palette (Modern & Soft) */
+      --bg-body: #f3f4f6;
+      --primary: #4f46e5;       /* Indigo */
+      --primary-hover: #4338ca;
+      --success: #10b981;       /* Emerald */
+      --danger: #ef4444;        /* Red */
+      --text-main: #1f2937;     /* Gray 800 */
+      --text-sub: #6b7280;      /* Gray 500 */
+      --card-bg: #ffffff;
+      --border-color: #e5e7eb;
+      
+      /* Spacing & Radius */
+      --radius-xl: 16px;
+      --radius-md: 10px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; outline: none; }
+    
+    body {
+      margin: 0;
+      font-family: "Kanit", sans-serif;
+      background-color: var(--bg-body);
+      /* Background Pattern เพื่อความสวยงาม */
+      background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--text-main);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* --- Header & Topbar --- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .topbar-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), #818cf8);
+      color: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+    }
+
+    .brand-text h1 { margin: 0; font-size: 18px; font-weight: 600; color: var(--text-main); line-height: 1.2; }
+    .brand-text p { margin: 0; font-size: 12px; color: var(--text-sub); }
+
+    .nav-btn {
+      text-decoration: none;
+      font-size: 13px;
+      color: var(--text-main);
+      background: white;
+      padding: 8px 16px;
+      border-radius: 99px;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+    .nav-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* --- Layout Content --- */
+    .container {
+      max-width: 1000px;
+      margin: 24px auto;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* --- Summary Cards (New!) --- */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .stat-label { font-size: 13px; color: var(--text-sub); font-weight: 500; }
+    .stat-value { font-size: 24px; font-weight: 700; color: var(--text-main); }
+    
+    .stat-value.income { color: var(--success); }
+    .stat-value.expense { color: var(--danger); }
+    .stat-value.net { color: var(--primary); }
+
+    /* --- Card Styles --- */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border-color);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .card-title { font-size: 18px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    .card-title::before { content:''; display:block; width:4px; height:24px; background:var(--primary); border-radius:4px; }
+
+    /* --- Form Elements --- */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+
+    /* Responsive Form Grid */
+    .col-span-12 { grid-column: span 12; }
+    .col-span-6 { grid-column: span 6; }
+    .col-span-4 { grid-column: span 4; }
+    .col-span-3 { grid-column: span 3; }
+    .col-span-2 { grid-column: span 2; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-size: 13px; font-weight: 500; color: var(--text-main); }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-main);
+      background: #f9fafb;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      transition: all 0.2s;
+    }
+    .input-field:focus {
+      background: white;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+    
+    /* Custom Scrollbar for Multi-select */
+    select[multiple] {
+      height: 110px;
+      padding: 8px;
+    }
+    select[multiple] option {
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-bottom: 2px;
+    }
+    select[multiple] option:checked {
+      background: #e0e7ff; /* Indigo-100 */
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    /* --- Buttons --- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 99px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);
+    }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary { background: white; border: 1px solid var(--border-color); color: var(--text-main); }
+    .btn-secondary:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+    .btn-warning { background: #f59e0b; color: white; }
+    .btn-warning:hover { background: #d97706; }
+
+    .btn-danger { background: #fee2e2; color: #b91c1c; padding: 6px 12px; font-size: 12px; }
+    .btn-danger:hover { background: #fecaca; }
+
+    .btn-small { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+
+    /* --- Filter Bar --- */
+    .filter-bar {
+      background: #f9fafb;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      border: 1px solid #f3f4f6;
+    }
+
+    /* --- Table --- */
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+    
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    
+    thead { background: #f9fafb; border-bottom: 1px solid var(--border-color); }
+    th { padding: 14px 16px; text-align: left; font-size: 13px; font-weight: 600; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.03em; }
+    
+    tbody tr { border-bottom: 1px solid var(--border-color); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f9fafb; }
+    
+    td { padding: 14px 16px; font-size: 14px; color: var(--text-main); vertical-align: middle; }
+    
+    .text-right { text-align: right; }
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 500;
+      background: #e0f2fe; color: #0369a1; /* Default Blue Pill */
+    }
+
+    .time-badge { font-size: 11px; color: var(--text-sub); display: block; margin-top: 2px; }
+
+    /* --- Pagination --- */
+    .pagination-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      font-size: 13px;
+      color: var(--text-sub);
+    }
+    .page-controls { display: flex; gap: 8px; }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .col-span-12, .col-span-6, .col-span-4, .col-span-3, .col-span-2 { grid-column: span 1; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .filter-bar > div { width: 100%; max-width: none !important; }
+      .card { padding: 16px; }
+      .topbar-inner { padding: 10px 16px; }
+    }
   </style>
 </head>
 <body>
-<div class="bg-orb orb1"></div>
-<div class="bg-orb orb2"></div>
-<div class="bg-orb orb3"></div>
 
-<div class="page">
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
         <div class="brand-logo">฿</div>
-        <div>
-          <div class="brand-text-title">My Budget</div>
-          <div class="brand-text-sub">บันทึกรายรับ–รายจ่าย (Cloud)</div>
+        <div class="brand-text">
+          <h1>My Budget</h1>
+          <p>จัดการการเงิน Cloud</p>
         </div>
       </div>
-      <div class="topbar-actions">
-        <span class="topbar-link" style="border-style:dashed; color:#059669; background:#ecfdf5; border-color:#6ee7b7;">
-          ☁️ ข้อมูลเก็บบน Cloud (Firebase)
-        </span>
-        <a href="manage.html" class="topbar-link">⚙️ จัดการหมวดหมู่ / วิธีจ่าย</a>
+      <div class="nav-actions">
+        <a href="manage.html" class="nav-btn">
+          <span>⚙️ ตั้งค่าหมวดหมู่</span>
+        </a>
       </div>
     </div>
   </header>
 
-  <main class="content">
-    <section class="card card-form">
-      <div class="card-inner">
-        <div class="card-header">
-          <div>
-            <div class="card-title">ฟอร์มบันทึกรายการ</div>
-            <div class="card-subtitle">ระบุวันที่ รายการ หมวดหมู่ และจำนวนเงิน จากนั้นกดบันทึก</div>
-          </div>
-          <div class="form-tag">พร้อมใช้งาน</div>
-        </div>
+  <main class="container">
 
-        <form id="entry-form">
-          <div class="form-grid">
-            <div class="field">
-              <label for="date">วันที่</label>
-              <input type="date" id="date" required>
-            </div>
-
-            <div class="field">
-              <label for="item">รายการ</label>
-              <input type="text" id="item" required placeholder="เช่น เงินเดือน, ค่าอาหาร">
-            </div>
-
-            <div class="field">
-              <label for="category">หมวดหมู่</label>
-              <select id="category" required multiple style="height: 100px; padding: 5px; overflow-y: auto;">
-  <option value="">กำลังโหลด...</option>
-</select>
-<div style="font-size: 11px; color: #6b7280; margin-top: 2px;">
-  💡 คอม: กด Ctrl (หรือ Cmd) ค้างเพื่อเลือกหลายอัน | มือถือ: ติ๊กเลือกได้เลย
-</div>
-            </div>
-
-            <div class="field">
-              <label for="method">วิธีจ่าย / รับ</label>
-              <select id="method" required>
-                <option value="">กำลังโหลด...</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label for="income">รายรับ (+)</label>
-              <input type="number" id="income" min="0" step="0.01" placeholder="0.00">
-            </div>
-
-            <div class="field">
-              <label for="expense">รายจ่าย (-)</label>
-              <input type="number" id="expense" min="0" step="0.01" placeholder="0.00">
-            </div>
-
-            <div class="field field-note">
-              <label for="note">หมายเหตุ</label>
-              <textarea id="note" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
-            </div>
-
-            <div class="field field-actions">
-              <div class="btn-row">
-                <button type="submit" class="btn btn-primary">บันทึกรายการ</button>
-                <button type="reset" class="btn btn-secondary">🧹 ล้าง</button>
-              </div>
-            </div>
-          </div>
-        </form>
+    <section class="summary-grid">
+      <div class="stat-card">
+        <span class="stat-label">รายรับทั้งหมด</span>
+        <span class="stat-value income" id="sum-income">0.00</span>
       </div>
+      <div class="stat-card">
+        <span class="stat-label">รายจ่ายทั้งหมด</span>
+        <span class="stat-value expense" id="sum-expense">0.00</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">คงเหลือสุทธิ</span>
+        <span class="stat-value net" id="sum-net">0.00</span>
+      </div>
+    </section>
+
+    <section class="card card-form">
+      <div class="card-header">
+        <div class="card-title">📝 บันทึกรายการใหม่</div>
+      </div>
+
+      <form id="entry-form">
+        <div class="form-grid">
+          <div class="form-group col-span-4">
+            <label class="form-label" for="date">วันที่</label>
+            <input type="date" id="date" class="input-field" required>
+          </div>
+          
+          <div class="form-group col-span-8">
+            <label class="form-label" for="item">รายการ</label>
+            <input type="text" id="item" class="input-field" placeholder="เช่น เงินเดือน, ค่ากาแฟ, ช้อปปิ้ง" required>
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label" for="category">
+              หมวดหมู่ (เลือกได้มากกว่า 1)
+              <span style="font-weight:400; color:#9ca3af; font-size:11px; margin-left:4px;">*กด Ctrl ค้างเพื่อเลือกหลายอัน</span>
+            </label>
+            <select id="category" class="input-field" multiple required>
+              <option value="">กำลังโหลด...</option>
+            </select>
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label" for="method">วิธีจ่าย / รับ</label>
+            <select id="method" class="input-field" required>
+              <option value="">กำลังโหลด...</option>
+            </select>
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label">รายรับ (+)</label>
+            <input type="number" id="income" class="input-field" min="0" step="0.01" placeholder="0.00" style="color:var(--success); font-weight:600;">
+          </div>
+          <div class="form-group col-span-6">
+            <label class="form-label">รายจ่าย (-)</label>
+            <input type="number" id="expense" class="input-field" min="0" step="0.01" placeholder="0.00" style="color:var(--danger); font-weight:600;">
+          </div>
+
+          <div class="form-group col-span-12">
+            <label class="form-label" for="note">หมายเหตุ</label>
+            <input type="text" id="note" class="input-field" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)">
+          </div>
+
+          <div class="col-span-12" style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+             <button type="reset" class="btn btn-secondary">ล้างค่า</button>
+             <button type="submit" class="btn btn-primary" style="min-width: 140px;">บันทึกรายการ</button>
+          </div>
+        </div>
+      </form>
     </section>
 
     <section class="card">
-      <div class="card-inner">
-        <div class="card-header">
-          <div>
-            <div class="card-title">รายการทั้งหมด</div>
-            <div class="card-subtitle">ข้อมูลทั้งหมดดึงมาจาก Database กลาง (Firebase)</div>
-          </div>
-          <div class="summary-bar">
-            <div class="summary-item" id="sum-income">รายรับ: 0.00</div>
-            <div class="summary-item" id="sum-expense">รายจ่าย: 0.00</div>
-            <div class="summary-item" id="sum-net">สุทธิ: 0.00</div>
-          </div>
-        </div>
+      <div class="card-header">
+        <div class="card-title">📋 ประวัติรายการ</div>
+      </div>
 
-        <div class="row" style="margin-bottom:8px;">
-          <div class="field" style="max-width:180px;">
-            <label for="filter-month">เดือน</label>
-            <input type="month" id="filter-month">
-          </div>
-          <div class="field" style="max-width:160px;">
-            <label for="filter-category">หมวดหมู่</label>
-            <select id="filter-category"></select>
-          </div>
-          <div class="field" style="max-width:160px;">
-            <label for="filter-method">วิธีจ่าย</label>
-            <select id="filter-method"></select>
-          </div>
-          <div class="field" style="flex:1;">
-            <label for="filter-text">ค้นหา</label>
-            <input type="text" id="filter-text" placeholder="พิมพ์เพื่อค้นหา...">
-          </div>
-          <div class="field" style="flex:0 0 auto; align-self:flex-end;">
-            <div class="btn-row">
-              <button type="button" class="btn btn-secondary" id="apply-filter">🔍 กรอง</button>
-              <button type="button" class="btn btn-secondary" id="clear-filter">❌ ล้าง</button>
-            </div>
-          </div>
+      <div class="filter-bar">
+        <div class="form-group" style="flex: 1; min-width: 150px;">
+          <label class="form-label">เดือน</label>
+          <input type="month" id="filter-month" class="input-field">
         </div>
-
-        <div class="table-wrapper">
-          <table>
-            <thead>
-            <tr>
-              <th>วันที่</th>
-              <th>รายการ</th>
-              <th>หมวดหมู่</th>
-              <th class="text-right">รายรับ</th>
-              <th class="text-right">รายจ่าย</th>
-              <th>วิธี</th>
-              <th>หมายเหตุ</th>
-              <th></th>
-            </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-          </table>
+        <div class="form-group" style="flex: 1; min-width: 120px;">
+          <label class="form-label">หมวดหมู่</label>
+          <select id="filter-category" class="input-field"></select>
         </div>
-
-        <div class="table-footer-row">
-          <div class="field" style="max-width:100px;">
-            <label>ต่อหน้า</label>
-            <select id="page-size">
-              <option value="5">5</option>
-              <option value="10" selected>10</option>
-              <option value="20">20</option>
-            </select>
-          </div>
-          <div class="field" style="flex:1; text-align:right;">
-             <div id="pagination-controls"></div>
-          </div>
+        <div class="form-group" style="flex: 1; min-width: 120px;">
+          <label class="form-label">วิธีจ่าย</label>
+          <select id="filter-method" class="input-field"></select>
+        </div>
+        <div class="form-group" style="flex: 2; min-width: 200px;">
+          <label class="form-label">ค้นหา</label>
+          <input type="text" id="filter-text" class="input-field" placeholder="พิมพ์ชื่อ, ยอดเงิน, หมวดหมู่...">
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary btn-small" id="apply-filter" style="height:42px;">🔍</button>
+          <button type="button" class="btn btn-secondary btn-small" id="clear-filter" style="height:42px;">❌</button>
         </div>
       </div>
-    </section>
-  </main>
-</div>
 
-<script type="module" src="main.js"></script>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th width="15%">วันที่</th>
+              <th width="20%">รายการ</th>
+              <th width="15%">หมวดหมู่</th>
+              <th width="10%" class="text-right">รายรับ</th>
+              <th width="10%" class="text-right">รายจ่าย</th>
+              <th width="10%">วิธี</th>
+              <th width="10%">หมายเหตุ</th>
+              <th width="10%" class="text-right">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            </tbody>
+        </table>
+      </div>
+
+      <div class="pagination-wrapper">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span>แสดง</span>
+          <select id="page-size" class="input-field" style="width:auto; padding:4px 8px;">
+            <option value="5">5</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+          <span>รายการ/หน้า</span>
+        </div>
+        
+        <div id="pagination-controls" class="page-controls">
+           </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="main.js"></script>
 
 </body>
 </html>
