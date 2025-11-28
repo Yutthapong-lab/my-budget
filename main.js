@@ -1,4 +1,4 @@
-// --- main.js (Colorful Mobile-First Edition) ---
+// --- main.js (Compact Animated Version) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -19,16 +19,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
 });
 
-// Color Logic
+// Helper: Color Palettes for Categories
 function getColorForCategory(name) {
     const palettes = [
-        { bg: "#E0E7FF", text: "#4338CA" }, // Indigo
-        { bg: "#DCFCE7", text: "#15803D" }, // Emerald
-        { bg: "#FFEDD5", text: "#C2410C" }, // Orange
-        { bg: "#FCE7F3", text: "#BE185D" }, // Pink
-        { bg: "#FEF3C7", text: "#B45309" }, // Amber
-        { bg: "#E0F2FE", text: "#0369A1" }, // Sky
-        { bg: "#F3E8FF", text: "#7E22CE" }  // Purple
+        { bg: "#e0e7ff", text: "#4338ca" }, // Indigo
+        { bg: "#dcfce7", text: "#15803d" }, // Green
+        { bg: "#ffedd5", text: "#c2410c" }, // Orange
+        { bg: "#fce7f3", text: "#be185d" }, // Pink
+        { bg: "#fef3c7", text: "#b45309" }, // Amber
+        { bg: "#e0f2fe", text: "#0369a1" }, // Sky
+        { bg: "#f3e8ff", text: "#7e22ce" }  // Purple
     ];
     const index = name.charCodeAt(0) % palettes.length;
     return palettes[index];
@@ -89,15 +89,16 @@ window.editRecord = function(id) {
 
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกแก้ไข';
+    submitBtn.innerHTML = '<span class="material-icons-round" style="font-size:18px;">edit</span> บันทึกแก้ไข';
     submitBtn.classList.add("btn-edit-mode");
     
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll to top inside app-layout
+    document.querySelector('.app-layout').scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function resetSubmitButton() {
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<span class="material-icons-round">check_circle</span> บันทึกข้อมูล';
+    submitBtn.innerHTML = '<span class="material-icons-round" style="font-size:18px;">check</span> บันทึก';
     submitBtn.classList.remove("btn-edit-mode");
 }
 
@@ -137,20 +138,10 @@ window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
-    const fCat = document.getElementById("filter-category")?.value;
-    const fMethod = document.getElementById("filter-method")?.value;
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
-        
-        let matchCat = true;
-        if (fCat) {
-            if (Array.isArray(r.category)) matchCat = r.category.includes(fCat);
-            else matchCat = r.category === fCat;
-        }
-
-        const matchMethod = fMethod ? r.method === fMethod : true;
         const catText = Array.isArray(r.category) ? r.category.join(" ") : (r.category || "");
         
         const matchText = fText ? (
@@ -161,12 +152,12 @@ function applyFilters() {
             (r.income || 0).toString().includes(fText) ||         
             (r.expense || 0).toString().includes(fText)           
         ) : true;
-        return matchMonth && matchCat && matchMethod && matchText;
+        return matchMonth && matchText;
     });
     currentPage = 1; renderList(); updateSummary();
 }
 
-// --- Render List as Cards ---
+// --- Render List Items ---
 function renderList() {
     const container = document.getElementById("table-body");
     if(!container) return; container.innerHTML = "";
@@ -179,7 +170,7 @@ function renderList() {
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     if(displayItems.length === 0) {
-        container.innerHTML = `<div class="empty-msg">ไม่มีรายการ...</div>`;
+        container.innerHTML = `<div style="text-align:center; color:#cbd5e1; margin-top:20px;">ไม่มีรายการ...</div>`;
         return;
     }
 
@@ -194,38 +185,31 @@ function renderList() {
         catHtml = cats.map(c => {
             if(!c) return "";
             const color = getColorForCategory(c);
-            return `<span class="tc-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
+            return `<span class="t-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
         }).join("");
 
         const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "";
         const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "";
 
         const card = document.createElement("div");
-        card.className = "trans-card";
+        card.className = "t-card";
         card.innerHTML = `
-            <div class="tc-header">
-                <div style="flex:1;">
-                   <div class="tc-date">
-                      <span class="material-icons-round" style="font-size:14px;">event</span> ${r.date} ${timeStr ? '• '+timeStr : ''}
-                   </div>
-                   <div class="tc-title">${r.item}</div>
-                   <div class="tc-badges">${catHtml}</div>
+            <div class="t-left">
+                <div class="t-date">
+                   <span class="material-icons-round" style="font-size:12px;">event</span> ${r.date} ${timeStr}
                 </div>
-                <div class="action-group">
-                    <button class="btn-icon bi-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">edit</span></button>
-                    <button class="btn-icon bi-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">delete</span></button>
+                <div class="t-title">${r.item}</div>
+                <div class="t-badges">${catHtml}</div>
+                <div style="font-size:10px; color:#94a3b8; margin-top:2px;">${r.method} ${r.note ? '• '+r.note : ''}</div>
+            </div>
+            <div class="t-right">
+                <div class="val-plus">${incVal}</div>
+                <div class="val-minus">${expVal}</div>
+                <div class="action-row">
+                   <button class="btn-act ba-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">edit</span></button>
+                   <button class="btn-act ba-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">delete</span></button>
                 </div>
             </div>
-
-            <div class="tc-body">
-                <div style="font-size:12px; color:#64748b;">${r.method}</div>
-                <div>
-                    <span class="val-inc">${incVal}</span>
-                    <span class="val-exp">${expVal}</span>
-                </div>
-            </div>
-
-            ${r.note ? `<div class="tc-footer"><div class="tc-note">Note: ${r.note}</div></div>` : ''}
         `;
         container.appendChild(card);
     });
@@ -233,9 +217,9 @@ function renderList() {
     const controls = document.getElementById("pagination-controls");
     if(controls) {
         controls.innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:#fff; width:36px; height:36px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b;">chevron_left</span></button>
-        <span style="align-self:center; font-size:13px; color:#A0AEC0;">${currentPage} / ${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:#fff; width:36px; height:36px; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b;">chevron_right</span></button>`;
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:#fff; width:30px; height:30px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b; font-size:16px;">chevron_left</span></button>
+        <span style="align-self:center; font-size:12px; color:#94a3b8;">${currentPage}/${totalPages}</span>
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:#fff; width:30px; height:30px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b; font-size:16px;">chevron_right</span></button>`;
     }
 }
 
@@ -308,12 +292,8 @@ function setupEventListeners() {
     const filterText = document.getElementById("filter-text");
     if(filterText) filterText.addEventListener("input", applyFilters);
     document.getElementById("filter-month")?.addEventListener("change", applyFilters);
-    document.getElementById("filter-category")?.addEventListener("change", applyFilters);
-    document.getElementById("filter-method")?.addEventListener("change", applyFilters);
     document.getElementById("clear-filter")?.addEventListener("click", () => {
         document.getElementById("filter-month").value = "";
-        document.getElementById("filter-category").value = "";
-        document.getElementById("filter-method").value = "";
         if(filterText) filterText.value = "";
         applyFilters();
     });
