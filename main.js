@@ -1,10 +1,10 @@
-// --- main.js ---
+// --- main.js (Multi-Category Version) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, 
     addDoc, 
     deleteDoc, 
-    updateDoc, // เพิ่ม updateDoc เข้ามา
+    updateDoc, 
     doc, 
     query, 
     orderBy, 
@@ -17,7 +17,7 @@ import {
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
-let editingId = null; // ตัวแปรเก็บ ID ที่กำลังแก้ไข (ถ้าเป็น null คือโหมดเพิ่มปกติ)
+let editingId = null;
 
 const recordsCol = collection(db, "records"); 
 
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // --- Firebase Real-time ---
 function subscribeToFirestore() {
-    // เรียงตามวันที่ และ เวลาที่สร้าง (ตามที่คุณทำ Index ไว้)
+    // เรียงตามวันที่ และ เวลาที่สร้าง
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     
     onSnapshot(q, (snapshot) => {
@@ -44,24 +44,24 @@ function subscribeToFirestore() {
     });
 }
 
-// --- ฟังก์ชันบันทึก (เพิ่ม + แก้ไข) ---
+// --- ฟังก์ชันบันทึก (Add/Edit) ---
 async function saveRecord(rec) {
     try {
         if (editingId) {
-            // --- โหมดแก้ไข (Update) ---
-            // อัปเดตข้อมูลเดิม (ไม่แก้ createdAt เพื่อให้ลำดับเวลาคงเดิม)
+            // Update
             await updateDoc(doc(db, "records", editingId), rec);
-            
             alert("✅ แก้ไขข้อมูลเรียบร้อย");
             
-            // รีเซ็ตสถานะกลับเป็นโหมดปกติ
+            // Reset UI
             editingId = null;
-            document.querySelector("#entry-form button[type='submit']").textContent = "บันทึกรายการ";
-            document.querySelector("#entry-form button[type='submit']").classList.remove("btn-warning");
-            document.querySelector("#entry-form button[type='submit']").classList.add("btn-primary");
+            const submitBtn = document.querySelector("#entry-form button[type='submit']");
+            submitBtn.textContent = "บันทึกรายการ";
+            submitBtn.classList.remove("btn-warning");
+            submitBtn.classList.add("btn-primary");
+            submitBtn.style.backgroundColor = "";
         } else {
-            // --- โหมดเพิ่มใหม่ (Add) ---
-            rec.createdAt = serverTimestamp(); // ใส่เวลาเฉพาะตอนเพิ่มใหม่
+            // Add New
+            rec.createdAt = serverTimestamp();
             await addDoc(recordsCol, rec);
             alert("✅ บันทึกข้อมูลเรียบร้อย");
         }
@@ -70,43 +70,53 @@ async function saveRecord(rec) {
     }
 }
 
-// --- ฟังก์ชันเตรียมข้อมูลเพื่อแก้ไข (เรียกจากปุ่มในตาราง) ---
+// --- ฟังก์ชันเตรียมข้อมูลเพื่อแก้ไข ---
 window.editRecord = function(id) {
-    // 1. หาข้อมูลจาก ID
     const rec = allRecords.find(r => r.id === id);
     if (!rec) return;
 
-    // 2. นำข้อมูลไปใส่ในฟอร์ม
     document.getElementById("date").value = rec.date;
     document.getElementById("item").value = rec.item;
-    document.getElementById("category").value = rec.category;
+    
+    // --- จัดการ Dropdown หมวดหมู่ (Multi-select) ---
+    const catSelect = document.getElementById("category");
+    // เคลียร์ค่าที่เลือกไว้ก่อน
+    Array.from(catSelect.options).forEach(option => option.selected = false);
+
+    if (Array.isArray(rec.category)) {
+        // กรณีข้อมูลใหม่ (เป็น Array)
+        rec.category.forEach(val => {
+            // หา option ที่มีค่าตรงกัน แล้วติ๊กถูก
+            const option = Array.from(catSelect.options).find(o => o.value === val);
+            if (option) option.selected = true;
+        });
+    } else {
+        // กรณีข้อมูลเก่า (เป็น String ตัวเดียว)
+        catSelect.value = rec.category;
+    }
+    // ------------------------------------------
+
     document.getElementById("method").value = rec.method;
     document.getElementById("income").value = rec.income || "";
     document.getElementById("expense").value = rec.expense || "";
     document.getElementById("note").value = rec.note || "";
 
-    // 3. เปลี่ยนสถานะเป็นโหมดแก้ไข
     editingId = id;
-
-    // 4. เปลี่ยนหน้าตาปุ่มบันทึก ให้รู้ว่ากำลังแก้
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
     submitBtn.textContent = "💾 บันทึกการแก้ไข";
-    submitBtn.classList.remove("btn-primary"); // เอาสีน้ำเงินออก
-    submitBtn.classList.add("btn-warning");    // (ถ้ามี class สีส้ม) หรือจะใช้ style ก็ได้
-    submitBtn.style.backgroundColor = "#f59e0b"; // สีส้ม เพื่อให้รู้ว่าแก้
+    submitBtn.classList.remove("btn-primary");
+    submitBtn.classList.add("btn-warning");
+    submitBtn.style.backgroundColor = "#f59e0b";
 
-    // 5. เลื่อนหน้าจอขึ้นไปที่ฟอร์ม
     document.querySelector(".card-form").scrollIntoView({ behavior: "smooth" });
 }
 
-// --- ฟังก์ชันลบ ---
 window.deleteRecord = async function(id) {
     if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
     try { await deleteDoc(doc(db, "records", id)); } 
     catch (err) { alert("❌ ลบไม่สำเร็จ"); }
 }
 
-// --- Master Data ---
 async function loadMasterData() {
     const catSelect = document.getElementById("category");
     const methodSelect = document.getElementById("method");
@@ -116,10 +126,17 @@ async function loadMasterData() {
     const fillOptions = (elements, items) => {
         elements.forEach(el => {
             if (!el) return;
-            const currentVal = el.value;
-            el.innerHTML = '<option value="">-- เลือก --</option>';
+            const currentVal = el.value; // เก็บค่าเดิมไว้ (กรณี single select)
+            el.innerHTML = '<option value="">-- เลือก --</option>'; // เฉพาะ filter/method ที่ยังเป็น single
+            
+            // ถ้าเป็นช่อง Category หลัก (ในฟอร์ม) ไม่ต้องมี "-- เลือก --" เพราะเป็น Multiple
+            if (el.id === "category") {
+                el.innerHTML = ""; 
+            }
+
             items.forEach(item => { el.innerHTML += `<option value="${item}">${item}</option>`; });
-            if(currentVal) el.value = currentVal;
+            
+            if (el.id !== "category") el.value = currentVal;
         });
     };
 
@@ -140,7 +157,7 @@ async function loadMasterData() {
 
 window.changePage = function(delta) { currentPage += delta; renderTable(); }
 
-// --- LOGIC การกรอง ---
+// --- LOGIC การกรอง (ปรับให้รองรับ Array) ---
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
     const fCat = document.getElementById("filter-category")?.value;
@@ -149,13 +166,26 @@ function applyFilters() {
 
     filteredRecords = allRecords.filter(r => {
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
-        const matchCat = fCat ? r.category === fCat : true;
+        
+        // แก้ไข: เช็คหมวดหมู่ (รองรับทั้ง Array และ String)
+        let matchCat = true;
+        if (fCat) {
+            if (Array.isArray(r.category)) {
+                matchCat = r.category.includes(fCat); // ถ้ามีหมวดหมู่นี้อยู่ในลิสต์ ถือว่าตรง
+            } else {
+                matchCat = r.category === fCat; // ข้อมูลเก่า
+            }
+        }
+
         const matchMethod = fMethod ? r.method === fMethod : true;
         
+        // เตรียมข้อมูลหมวดหมู่เป็น Text สำหรับค้นหา
+        const catText = Array.isArray(r.category) ? r.category.join(" ") : (r.category || "");
+
         const matchText = fText ? (
             (r.item || "").toLowerCase().includes(fText) ||       
             (r.note || "").toLowerCase().includes(fText) ||       
-            (r.category || "").toLowerCase().includes(fText) ||   
+            catText.toLowerCase().includes(fText) ||  // ค้นหาในหมวดหมู่ทั้งหมด 
             (r.method || "").toLowerCase().includes(fText) ||     
             (r.income || 0).toString().includes(fText) ||         
             (r.expense || 0).toString().includes(fText)           
@@ -169,7 +199,7 @@ function applyFilters() {
     updateSummary();
 }
 
-// --- แสดงตาราง ---
+// --- แสดงตาราง (Render Pills หลายอัน) ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
     if(!tbody) return;
@@ -196,14 +226,26 @@ function renderTable() {
             timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
         }
 
+        // --- สร้าง HTML สำหรับหมวดหมู่ (รองรับหลายอัน) ---
+        let catHtml = "";
+        if (Array.isArray(r.category)) {
+            // ถ้าเป็น Array สร้าง Pill หลายอัน
+            catHtml = r.category.map(c => 
+                `<span class="pill" style="background:#f1f5f9; color:#475569; margin-right:4px;">${c}</span>`
+            ).join("");
+        } else {
+            // ข้อมูลเก่า (String) สร้าง Pill อันเดียว
+            catHtml = `<span class="pill" style="background:#f1f5f9; color:#475569;">${r.category}</span>`;
+        }
+        // ------------------------------------------------
+
         tr.innerHTML = `
             <td>
                 ${r.date} 
                 <div style="font-size:11px; color:#6b7280; margin-top:2px;">🕒 ${timeStr}</div>
             </td>
             <td>${r.item}</td>
-            <td><span class="pill" style="background:#f1f5f9; color:#475569;">${r.category}</span></td>
-            <td class="text-right" style="color:${r.income > 0 ? '#16a34a' : 'inherit'}">${incomeTxt}</td>
+            <td>${catHtml}</td> <td class="text-right" style="color:${r.income > 0 ? '#16a34a' : 'inherit'}">${incomeTxt}</td>
             <td class="text-right" style="color:${r.expense > 0 ? '#dc2626' : 'inherit'}">${expenseTxt}</td>
             <td>${r.method}</td>
             <td style="font-size:12px; color:#64748b;">${r.note || ""}</td>
@@ -223,7 +265,6 @@ function renderTable() {
     }
 }
 
-// --- สรุปยอด ---
 function updateSummary() {
     const totalInc = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.income)||0), 0);
     const totalExp = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.expense)||0), 0);
@@ -251,35 +292,51 @@ function setupEventListeners() {
     if(form) {
         form.addEventListener("submit", (e) => {
             e.preventDefault();
+
+            // --- ดึงค่าหมวดหมู่ (แบบ Multi-select) ---
+            const catSelect = document.getElementById("category");
+            // ใช้ Array.from เพื่อแปลง Options เป็น Array และ filter เฉพาะที่ selected
+            const selectedCategories = Array.from(catSelect.selectedOptions).map(option => option.value);
+
+            // เช็คว่าเลือกอย่างน้อย 1 อันไหม
+            if (selectedCategories.length === 0) {
+                alert("กรุณาเลือกหมวดหมู่อย่างน้อย 1 รายการ");
+                return;
+            }
+            // ----------------------------------------
+
             const newRec = {
                 date: document.getElementById("date").value,
                 item: document.getElementById("item").value,
-                category: document.getElementById("category").value,
+                category: selectedCategories, // บันทึกเป็น Array
                 method: document.getElementById("method").value,
                 income: parseFloat(document.getElementById("income").value) || 0,
                 expense: parseFloat(document.getElementById("expense").value) || 0,
                 note: document.getElementById("note").value
             };
             
-            // เรียกฟังก์ชัน saveRecord (ซึ่งจะเช็คเองว่า เพิ่ม หรือ แก้ไข)
             saveRecord(newRec);
 
             form.reset();
+            // เมื่อ Reset ต้องเคลียร์การเลือกใน Dropdown ด้วย
+            Array.from(catSelect.options).forEach(o => o.selected = false);
+            
             document.getElementById("date").valueAsDate = new Date();
         });
 
-        // เมื่อกดปุ่ม "ล้าง" ให้ยกเลิกโหมดแก้ไขด้วย
         form.addEventListener("reset", () => {
             editingId = null;
             const submitBtn = document.querySelector("#entry-form button[type='submit']");
             submitBtn.textContent = "บันทึกรายการ";
-            submitBtn.style.backgroundColor = ""; // คืนสีเดิม
+            submitBtn.style.backgroundColor = "";
             submitBtn.classList.remove("btn-warning");
             submitBtn.classList.add("btn-primary");
             
-            // คืนค่าวันที่ปัจจุบันหลังจาก reset
             setTimeout(() => {
                 document.getElementById("date").valueAsDate = new Date();
+                // เคลียร์ Dropdown อีกรอบเพื่อความชัวร์
+                const catSelect = document.getElementById("category");
+                if(catSelect) catSelect.selectedIndex = -1;
             }, 0);
         });
     }
