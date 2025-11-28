@@ -1,4 +1,4 @@
-// --- main.js (Web Single Column) ---
+// --- main.js (Chips Category Edition) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -8,9 +8,11 @@ let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
 let editingId = null;
+// เก็บหมวดหมู่ที่เลือกปัจจุบัน (เป็น Array)
+let selectedCategories = []; 
+
 const recordsCol = collection(db, "records"); 
 
-// Start
 document.addEventListener('DOMContentLoaded', async () => {
     await loadMasterData();
     const dateInput = document.getElementById('date');
@@ -34,7 +36,6 @@ function getColorForCategory(name) {
     return palettes[index];
 }
 
-// Firebase
 function subscribeToFirestore() {
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
@@ -68,14 +69,10 @@ window.editRecord = function(id) {
     document.getElementById("date").value = rec.date;
     document.getElementById("item").value = rec.item;
     
-    const catSelect = document.getElementById("category");
-    Array.from(catSelect.options).forEach(o => o.selected = false);
-    if (Array.isArray(rec.category)) {
-        rec.category.forEach(val => {
-            const option = Array.from(catSelect.options).find(o => o.value === val);
-            if (option) option.selected = true;
-        });
-    } else { catSelect.value = rec.category; }
+    // --- Set Chips for Edit ---
+    selectedCategories = Array.isArray(rec.category) ? rec.category : [rec.category];
+    renderCategoryChips(); // Re-render to show active state
+    // --------------------------
 
     document.getElementById("method").value = rec.method;
     
@@ -89,7 +86,7 @@ window.editRecord = function(id) {
 
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกแก้ไข';
+    submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกการแก้ไข';
     submitBtn.classList.add("btn-edit-mode");
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -101,46 +98,101 @@ function resetSubmitButton() {
     submitBtn.classList.remove("btn-edit-mode");
 }
 
+// Global variable to store categories list for chips
+let masterCategories = [];
+
 async function loadMasterData() {
-    const catSelect = document.getElementById("category");
     const methodSelect = document.getElementById("method");
     const filterCat = document.getElementById("filter-category");
     const filterMethod = document.getElementById("filter-method");
 
-    const fillOptions = (elements, items) => {
-        elements.forEach(el => {
-            if(!el) return;
-            const currentVal = el.value;
-            el.innerHTML = '<option value="">-- เลือก --</option>';
-            if(el.id === "category") el.innerHTML = ""; 
-            items.forEach(item => { el.innerHTML += `<option value="${item}">${item}</option>`; });
-            if(el.id !== "category") el.value = currentVal;
-        });
+    // Helper for dropdowns
+    const fillSelect = (el, items) => {
+        if(!el) return;
+        el.innerHTML = '<option value="">ทั้งหมด</option>';
+        if(el.id === "method") el.innerHTML = '<option value="">เลือก...</option>';
+        items.forEach(i => el.innerHTML += `<option value="${i}">${i}</option>`);
     };
 
     try {
         const catSnap = await getDocs(collection(db, "categories"));
-        let categories = []; catSnap.forEach(d => categories.push(d.data().name)); categories.sort();
+        masterCategories = []; 
+        catSnap.forEach(d => masterCategories.push(d.data().name)); 
+        masterCategories.sort();
 
         const methSnap = await getDocs(collection(db, "methods"));
-        let methods = []; methSnap.forEach(d => methods.push(d.data().name)); methods.sort();
+        let methods = []; 
+        methSnap.forEach(d => methods.push(d.data().name)); 
+        methods.sort();
 
-        if(categories.length===0) categories=["อาหาร","เดินทาง","ช้อปปิ้ง","อื่นๆ"];
+        if(masterCategories.length===0) masterCategories=["อาหาร","เดินทาง","ช้อปปิ้ง","อื่นๆ"];
         if(methods.length===0) methods=["เงินสด","โอนเงิน"];
 
-        fillOptions([catSelect, filterCat], categories);
-        fillOptions([methodSelect, filterMethod], methods);
+        // 1. Render Dropdowns (Filter & Method)
+        fillSelect(filterCat, masterCategories);
+        fillSelect(methodSelect, methods);
+        fillSelect(filterMethod, methods);
+
+        // 2. Render Chips (New!)
+        renderCategoryChips();
+
     } catch(e) { console.error(e); }
+}
+
+// --- ฟังก์ชันสร้างปุ่ม Chips ---
+function renderCategoryChips() {
+    const container = document.getElementById("category-container");
+    if(!container) return;
+    container.innerHTML = "";
+
+    masterCategories.forEach(cat => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "cat-chip-btn";
+        btn.textContent = cat;
+        
+        // เช็คว่าถูกเลือกอยู่ไหม
+        if (selectedCategories.includes(cat)) {
+            btn.classList.add("active");
+            // Add checkmark icon
+            btn.innerHTML = `<span class="material-icons-round" style="font-size:14px;">check</span> ${cat}`;
+        }
+
+        // Click Event
+        btn.addEventListener("click", () => {
+            if (selectedCategories.includes(cat)) {
+                // ถ้ามีอยู่แล้ว ให้เอาออก (Deselect)
+                selectedCategories = selectedCategories.filter(c => c !== cat);
+            } else {
+                // ถ้าไม่มี ให้ใส่เพิ่ม (Select)
+                selectedCategories.push(cat);
+            }
+            renderCategoryChips(); // Re-render
+        });
+
+        container.appendChild(btn);
+    });
 }
 
 window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
+    const fCat = document.getElementById("filter-category")?.value;
+    const fMethod = document.getElementById("filter-method")?.value;
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
+        
+        let matchCat = true;
+        // Logic กรองหมวดหมู่ (รองรับ Array)
+        if (fCat) {
+            if (Array.isArray(r.category)) matchCat = r.category.includes(fCat);
+            else matchCat = r.category === fCat;
+        }
+
+        const matchMethod = fMethod ? r.method === fMethod : true;
         const catText = Array.isArray(r.category) ? r.category.join(" ") : (r.category || "");
         
         const matchText = fText ? (
@@ -151,12 +203,11 @@ function applyFilters() {
             (r.income || 0).toString().includes(fText) ||         
             (r.expense || 0).toString().includes(fText)           
         ) : true;
-        return matchMonth && matchText;
+        return matchMonth && matchCat && matchMethod && matchText;
     });
     currentPage = 1; renderList(); updateSummary();
 }
 
-// --- Render Table ---
 function renderList() {
     const container = document.getElementById("table-body");
     if(!container) return; container.innerHTML = "";
@@ -169,7 +220,7 @@ function renderList() {
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     if(displayItems.length === 0) {
-        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#ccc;">ไม่มีรายการ...</td></tr>`;
+        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">ไม่มีรายการ...</td></tr>`;
         return;
     }
 
@@ -193,14 +244,18 @@ function renderList() {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>
-                <div style="font-weight:600;">${r.date}</div>
-                <div class="time-txt"><span class="material-icons-round" style="font-size:12px;">schedule</span> ${timeStr}</div>
+                <div style="font-weight:600; color:#1e293b;">${r.date}</div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${timeStr}</div>
             </td>
             <td>${r.item} <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${r.note || ''}</div></td>
             <td>${catHtml}</td>
-            <td style="text-align:right; color:#16a34a; font-weight:600;">${incVal}</td>
-            <td style="text-align:right; color:#dc2626; font-weight:600;">${expVal}</td>
-            <td><span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:4px; font-size:12px;">${r.method}</span></td>
+            <td style="text-align:right; color:#16a34a; font-weight:700;">${incVal}</td>
+            <td style="text-align:right; color:#dc2626; font-weight:700;">${expVal}</td>
+            
+            <td style="text-align:center;">
+                <span class="method-badge">${r.method}</span>
+            </td>
+            
             <td style="text-align:center;">
                <button class="act-btn ab-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">edit</span></button>
                <button class="act-btn ab-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">delete</span></button>
@@ -255,14 +310,13 @@ function setupEventListeners() {
 
         form.addEventListener("submit", (e) => {
             e.preventDefault();
-            const catSelect = document.getElementById("category");
-            const selectedCats = Array.from(catSelect.selectedOptions).map(o => o.value);
-            if(selectedCats.length===0) { alert("เลือกหมวดหมู่ก่อนครับ"); return; }
+            // ใช้ตัวแปร selectedCategories ที่เก็บค่าจาก Chips
+            if(selectedCategories.length===0) { alert("กรุณาเลือกหมวดหมู่ครับ"); return; }
 
             const newRec = {
                 date: document.getElementById("date").value,
                 item: document.getElementById("item").value,
-                category: selectedCats,
+                category: selectedCategories, // ใช้ Array นี้แทน
                 method: document.getElementById("method").value,
                 income: parseFloat(incInp.value) || 0,
                 expense: parseFloat(expInp.value) || 0,
@@ -270,7 +324,9 @@ function setupEventListeners() {
             };
             saveRecord(newRec);
             form.reset();
-            Array.from(catSelect.options).forEach(o=>o.selected=false);
+            // Reset Chips
+            selectedCategories = [];
+            renderCategoryChips();
             document.getElementById("date").valueAsDate = new Date();
         });
 
@@ -279,6 +335,8 @@ function setupEventListeners() {
             resetSubmitButton();
             setTimeout(() => {
                 incInp.disabled=false; expInp.disabled=false;
+                selectedCategories = []; // Clear selection
+                renderCategoryChips();   // Re-render
                 document.getElementById("date").valueAsDate = new Date();
             },0);
         });
@@ -287,8 +345,12 @@ function setupEventListeners() {
     const filterText = document.getElementById("filter-text");
     if(filterText) filterText.addEventListener("input", applyFilters);
     document.getElementById("filter-month")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-category")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-method")?.addEventListener("change", applyFilters);
     document.getElementById("clear-filter")?.addEventListener("click", () => {
         document.getElementById("filter-month").value = "";
+        document.getElementById("filter-category").value = "";
+        document.getElementById("filter-method").value = "";
         if(filterText) filterText.value = "";
         applyFilters();
     });
