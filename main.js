@@ -1,4 +1,4 @@
-// --- main.js (Fixed Icons & Layout) ---
+// --- main.js (Fixed Icons & Tag Layout) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Helper: Color Palettes
 function getColorForCategory(name) {
     const palettes = [
-        { bg: "#E0E7FF", text: "#4338CA" }, // Indigo
+        { bg: "#E0E7FF", text: "#4338ca" }, // Indigo
         { bg: "#DCFCE7", text: "#15803D" }, // Green
         { bg: "#FFEDD5", text: "#C2410C" }, // Orange
         { bg: "#FCE7F3", text: "#BE185D" }, // Pink
@@ -104,6 +104,7 @@ async function loadMasterData() {
     const filterCat = document.getElementById("filter-category");
     const filterMethod = document.getElementById("filter-method");
 
+    // Helper for dropdowns
     const fillSelect = (el, items) => {
         if(!el) return;
         el.innerHTML = '<option value="">ทั้งหมด</option>';
@@ -223,7 +224,8 @@ function renderList() {
         catHtml = cats.map(c => {
             if(!c) return "";
             const color = getColorForCategory(c);
-            return `<span style="background:${color.bg}; color:${color.text}; padding:4px 10px; border-radius:50px; font-size:12px; font-weight:600; margin-right:4px;">${c}</span>`;
+            // FIXED: Tag wrapped with style
+            return `<span class="cat-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
         }).join("");
 
         const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "-";
@@ -236,7 +238,11 @@ function renderList() {
                 <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${timeStr}</div>
             </td>
             <td>${r.item} <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${r.note || ''}</div></td>
-            <td>${catHtml}</td>
+            
+            <td>
+               <div class="tags-wrapper">${catHtml}</div>
+            </td>
+
             <td style="text-align:right; color:#16a34a; font-weight:700;">${incVal}</td>
             <td style="text-align:right; color:#dc2626; font-weight:700;">${expVal}</td>
             <td style="text-align:center;"><span class="badge-method">${r.method}</span></td>
