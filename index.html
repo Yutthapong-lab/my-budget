@@ -2,382 +2,360 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>My Budget - Modern Single</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  
+  <title>My Budget iOS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  
+
   <style>
     :root {
-      --bg-body: #f8fafc;
-      --primary: #6366f1;
-      --primary-dark: #4f46e5;
-      --card-bg: #ffffff;
-      --text-main: #1e293b;
-      --text-muted: #64748b;
+      /* Pastel Palette */
+      --bg-app: #F8F9FD;
+      --card-bg: #FFFFFF;
       
-      --radius-xl: 24px;
-      --radius-m: 16px;
+      /* Pastel Gradients */
+      --grad-primary: linear-gradient(135deg, #A18CD1 0%, #FBC2EB 100%); /* ม่วง-ชมพู */
+      --grad-income: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); /* เขียว-ฟ้า */
+      --grad-expense: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); /* แดง-ชมพู */
+      --grad-net: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); /* ฟ้าพาสเทล */
+
+      --text-main: #4A4A4A;
+      --text-sub: #9B9B9B;
+      --input-bg: #F0F2F5;
+
+      --radius-box: 24px;
+      --radius-btn: 50px;
       
-      --shadow-soft: 0 4px 20px -2px rgba(0,0,0,0.05);
-      --shadow-hover: 0 10px 25px -5px rgba(0,0,0,0.1);
+      --shadow-ios: 0 10px 30px -10px rgba(166, 171, 189, 0.3);
     }
 
-    * { box-sizing: border-box; outline: none; }
-    
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
     body {
-      margin: 0;
+      margin: 0; padding: 0;
       font-family: "Kanit", sans-serif;
-      background: var(--bg-body);
-      /* พื้นหลังลายจุดจางๆ */
-      background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-      background-size: 24px 24px;
+      background-color: var(--bg-app);
       color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      overflow-x: hidden; /* ห้ามเลื่อนซ้ายขวา */
     }
 
-    /* --- Navbar & Weather --- */
-    .navbar {
-      background: rgba(255,255,255,0.9);
-      backdrop-filter: blur(10px);
-      height: 70px;
-      position: sticky; top: 0; z-index: 100;
-      border-bottom: 1px solid rgba(0,0,0,0.05);
-      display: flex; align-items: center; justify-content: center;
-      padding: 0 20px;
-    }
-    .nav-inner {
-      width: 100%; max-width: 800px;
+    /* Header */
+    .ios-header {
+      padding: 20px 24px 10px;
       display: flex; justify-content: space-between; align-items: center;
+      background: transparent;
     }
-
-    .brand { display: flex; align-items: center; gap: 10px; }
-    .brand-logo {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      color: white; border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px; font-weight: 800;
-      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
-    }
-    .brand-text h1 { margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; }
-    .brand-text p { margin: 0; font-size: 12px; color: #64748b; }
-
-    /* Weather Widget (Cute) */
-    .weather-widget {
-      display: flex; align-items: center; gap: 8px;
-      background: #f1f5f9; padding: 6px 12px; border-radius: 50px;
-      font-size: 13px; font-weight: 500; color: #334155;
-      border: 1px solid #e2e8f0;
-    }
-    .weather-icon { font-size: 20px; }
-
-    /* --- Container (Single Column) --- */
-    .container {
-      width: 100%; max-width: 800px;
-      margin: 30px auto; padding: 0 20px;
-      display: flex; flex-direction: column; gap: 30px;
-      flex: 1;
-    }
-
-    /* --- Stats Cards --- */
-    .stats-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
-    }
-    .stat-card {
-      background: var(--card-bg); padding: 20px; border-radius: var(--radius-m);
-      box-shadow: var(--shadow-soft); text-align: center;
-      border: 1px solid white; transition: 0.3s; position: relative; overflow: hidden;
-    }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+    .header-title h1 { margin: 0; font-size: 28px; font-weight: 800; color: #4A4A4A; letter-spacing: -0.5px; }
+    .header-title p { margin: 0; font-size: 14px; color: #9B9B9B; }
     
-    /* ตกแต่งพื้นหลังการ์ด */
-    .stat-card::after {
-      content: ''; position: absolute; width: 60px; height: 60px;
-      border-radius: 50%; opacity: 0.1; top: -10px; right: -10px;
+    .weather-pill {
+      background: white; padding: 6px 12px; border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666;
     }
-    .card-income::after { background: #10b981; }
-    .card-expense::after { background: #ef4444; }
-    .card-net::after { background: #6366f1; }
 
-    .stat-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-    .stat-val { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-top: 4px; }
-    .c-green { color: #10b981; }
-    .c-red { color: #ef4444; }
-    .c-blue { color: #6366f1; }
+    /* Container */
+    .content-area {
+      padding: 0 20px 80px 20px; /* เว้นล่างเยอะหน่อยเผื่อ scroll */
+      display: flex; flex-direction: column; gap: 24px;
+    }
 
-    /* --- Form Section --- */
-    .main-card {
-      background: var(--card-bg); border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-soft); padding: 30px;
-      border: 1px solid white;
+    /* Stats Widget (แนวนอน Scrollable) */
+    .stats-scroller {
+      display: flex; gap: 16px; overflow-x: auto; 
+      padding-bottom: 20px; margin: 0 -20px; padding-left: 20px; padding-right: 20px;
+      scrollbar-width: none; /* Hide scrollbar Firefox */
     }
-    .card-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px dashed #f1f5f9;
+    .stats-scroller::-webkit-scrollbar { display: none; }
+
+    .widget-card {
+      min-width: 140px; flex: 1;
+      height: 140px;
+      border-radius: var(--radius-box);
+      padding: 16px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      color: white;
+      box-shadow: var(--shadow-ios);
+      position: relative; overflow: hidden;
     }
-    .card-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
     
-    .form-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    /* Decorative Circle */
+    .widget-card::after {
+      content: ''; position: absolute; top: -20px; right: -20px;
+      width: 80px; height: 80px; background: rgba(255,255,255,0.2);
+      border-radius: 50%;
     }
-    .full-width { grid-column: span 2; }
 
-    .input-label { font-size: 13px; font-weight: 500; color: #475569; margin-bottom: 6px; display: block; }
+    .widget-income { background: var(--grad-income); }
+    .widget-expense { background: var(--grad-expense); }
+    .widget-net { background: var(--grad-net); }
+
+    .w-label { font-size: 13px; font-weight: 500; opacity: 0.9; }
+    .w-val { font-size: 22px; font-weight: 700; word-break: break-all; }
+    .w-icon { font-size: 24px; opacity: 0.8; }
+
+    /* Form Card */
+    .ios-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-box);
+      padding: 24px;
+      box-shadow: var(--shadow-ios);
+    }
+    .card-head {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+    }
+    .card-title { font-size: 18px; font-weight: 700; color: #555; display: flex; align-items: center; gap: 8px; }
     
-    .modern-input {
-      width: 100%; padding: 12px 16px; border-radius: 12px;
-      border: 1px solid #e2e8f0; background: #f8fafc;
-      font-family: inherit; font-size: 14px; transition: 0.2s;
+    .setting-link {
+      font-size: 12px; color: #999; text-decoration: none; display: flex; align-items: center; gap: 4px;
+      background: #f5f5f5; padding: 4px 10px; border-radius: 12px;
     }
-    .modern-input:focus {
-      background: white; border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-    }
-    .modern-input:disabled { background: #f1f5f9; cursor: not-allowed; opacity: 0.6; }
 
+    /* Inputs */
+    .form-stack { display: flex; flex-direction: column; gap: 16px; }
+    
+    .input-group label {
+      font-size: 13px; color: #888; margin-bottom: 8px; display: block; font-weight: 500; margin-left: 4px;
+    }
+    .ios-input {
+      width: 100%; padding: 16px;
+      background: var(--input-bg);
+      border: none; border-radius: 16px;
+      font-size: 16px; color: #333; font-family: inherit;
+      transition: 0.2s;
+    }
+    .ios-input:focus { background: #fff; box-shadow: 0 0 0 2px #C2E9FB; }
+    
     /* Money Inputs */
-    .inp-inc { background: #f0fdf4; color: #15803d; font-weight: 600; }
-    .inp-inc:focus { border-color: #15803d; box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.1); }
-    .inp-exp { background: #fef2f2; color: #b91c1c; font-weight: 600; }
-    .inp-exp:focus { border-color: #b91c1c; box-shadow: 0 0 0 4px rgba(185, 28, 28, 0.1); }
-
+    .inp-green { color: #2ecc71; font-weight: 600; background: #E8F8F5; }
+    .inp-red { color: #e74c3c; font-weight: 600; background: #FDEDEC; }
+    
     /* Select Multiple */
-    select[multiple] { height: 100px; padding: 6px; }
-    select[multiple] option { padding: 8px 12px; border-radius: 8px; margin-bottom: 2px; font-size: 13px; }
+    select[multiple] { height: 120px; }
+    select[multiple] option { padding: 10px; border-radius: 10px; margin-bottom: 4px; font-size: 14px; }
     select[multiple] option:checked {
-      background: #eef2ff; color: var(--primary); font-weight: 600; border-left: 3px solid var(--primary);
+      background: #E0E7FF; color: #5D5FEF; font-weight: 600;
     }
 
     /* Buttons */
-    .btn-submit {
-      width: 100%; padding: 14px; border-radius: 50px; border: none;
-      background: linear-gradient(135deg, var(--primary), #4338ca);
-      color: white; font-weight: 600; font-size: 15px; cursor: pointer;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); transition: 0.2s;
-      display: flex; justify-content: center; align-items: center; gap: 8px;
+    .btn-ios-primary {
+      width: 100%; padding: 18px; border: none;
+      background: var(--grad-primary);
+      color: white; font-size: 16px; font-weight: 700;
+      border-radius: var(--radius-btn);
+      box-shadow: 0 8px 20px -5px rgba(161, 140, 209, 0.5);
+      cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;
+      transition: transform 0.1s;
     }
-    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
+    .btn-ios-primary:active { transform: scale(0.98); }
+
+    .btn-ios-edit {
+      background: linear-gradient(135deg, #f6d365 0%, #fda085 100%) !important;
+      box-shadow: 0 8px 20px -5px rgba(253, 160, 133, 0.5) !important;
+    }
+
+    .btn-ios-ghost {
+      background: transparent; border: 1px solid #ddd; color: #999;
+      padding: 12px; width: 100%; border-radius: var(--radius-btn); margin-top: 12px;
+    }
+
+    /* Table List Style (เปลี่ยนตารางเป็น Card List) */
+    .list-container {
+      display: flex; flex-direction: column; gap: 16px;
+    }
     
-    .btn-edit-mode {
-      background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+    .filter-box {
+      display: flex; gap: 10px; margin-bottom: 10px;
     }
-
-    .btn-clear {
-      margin-top: 10px; width: 100%; padding: 10px; border-radius: 50px;
-      background: transparent; border: 1px solid #cbd5e1; color: #64748b; font-weight: 500; cursor: pointer;
+    .search-pill {
+      flex: 1; background: white; border-radius: 50px; padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     }
-    .btn-clear:hover { background: #f1f5f9; color: #334155; }
-
-    /* --- Table & List --- */
-    .table-controls {
-      display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
-    }
-    .search-wrap { position: relative; flex: 1; }
-    .search-wrap input { padding-left: 36px; }
-    .search-icon { position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 18px; }
-
-    .table-responsive { overflow-x: auto; border-radius: 12px; border: 1px solid #e2e8f0; }
-    table { width: 100%; border-collapse: collapse; min-width: 700px; background: white; }
-    thead { background: #f8fafc; }
-    th { text-align: left; padding: 16px; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-    td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; }
-    tr:last-child td { border-bottom: none; }
+    .search-pill input { border: none; width: 100%; font-size: 14px; color: #555; }
     
-    /* New: Modern Action Buttons */
-    .action-btn {
-      width: 34px; height: 34px; border-radius: 10px; border: none;
-      display: inline-flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: 0.2s; margin-right: 6px;
+    /* Transaction Card Item */
+    .trans-item {
+      background: white; border-radius: 20px; padding: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+      display: flex; flex-direction: column; gap: 12px;
+      position: relative; overflow: hidden;
     }
-    .btn-edit-row { background: #f1f5f9; color: #64748b; }
-    .btn-edit-row:hover { background: #e0f2fe; color: #0284c7; transform: translateY(-2px); }
+    .trans-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .trans-date { font-size: 12px; color: #aaa; font-weight: 500; display: flex; gap: 4px; align-items: center; }
+    .trans-title { font-size: 16px; font-weight: 600; color: #333; margin-top: 2px; }
     
-    .btn-del-row { background: #fef2f2; color: #ef4444; }
-    .btn-del-row:hover { background: #fee2e2; color: #dc2626; transform: translateY(-2px); }
+    .trans-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .tag-pill { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
 
-    /* Colorful Category Pills */
-    .cat-pill {
-      display: inline-block; padding: 4px 10px; border-radius: 6px;
-      font-size: 12px; font-weight: 500; margin-right: 4px; margin-bottom: 4px;
+    .trans-amounts {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #F9FAFB; padding: 10px 14px; border-radius: 12px;
     }
-    /* สีจะถูกใส่ผ่าน Inline Style โดย JS */
+    .amt-inc { color: #2ecc71; font-weight: 700; font-size: 15px; }
+    .amt-exp { color: #e74c3c; font-weight: 700; font-size: 15px; }
 
-    .footer { text-align: center; margin-top: 40px; color: #94a3b8; font-size: 12px; padding-bottom: 20px; }
-
-    /* Responsive */
-    @media (max-width: 600px) {
-      .form-grid { grid-template-columns: 1fr; }
-      .full-width { grid-column: span 1; }
-      .stats-grid { grid-template-columns: 1fr; }
-      .navbar { padding: 0 16px; }
-      .container { margin: 20px auto; padding: 0 16px; }
+    .trans-actions {
+      display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px;
     }
+    .action-circle {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 18px; transition: 0.2s;
+    }
+    .act-edit { background: #FFF4E5; color: #FFA726; }
+    .act-del { background: #FFEBEE; color: #EF5350; }
+
+    /* Empty state */
+    .empty-state { text-align: center; color: #ccc; margin-top: 20px; font-weight: 300; }
+
+    /* Footer */
+    .ios-footer { text-align: center; color: #ccc; font-size: 11px; margin-top: 20px; }
+
   </style>
 </head>
 <body>
 
-  <nav class="navbar">
-    <div class="nav-inner">
-      <div class="brand">
-        <div class="brand-logo">฿</div>
-        <div class="brand-text">
-          <h1>My Budget</h1>
-          <p>Cloud Edition</p>
+  <header class="ios-header">
+    <div class="header-title">
+      <p>สวัสดีวันศุกร์ 🌤️</p>
+      <h1>My Budget</h1>
+    </div>
+    <div class="weather-pill">
+      <span class="material-icons-round" style="color:#FFB74D;">wb_sunny</span>
+      29°
+    </div>
+  </header>
+
+  <div class="content-area">
+
+    <div class="stats-scroller">
+      <div class="widget-card widget-income">
+        <div class="w-top">
+          <span class="material-icons-round w-icon">arrow_downward</span>
+          <div class="w-label">รายรับ</div>
         </div>
+        <div class="w-val" id="sum-income">0.00</div>
       </div>
-      
-      <div class="weather-widget">
-        <span class="weather-icon">🌤️</span>
-        <span>29°C ฟ้าใส</span>
+
+      <div class="widget-card widget-expense">
+        <div class="w-top">
+          <span class="material-icons-round w-icon">arrow_upward</span>
+          <div class="w-label">รายจ่าย</div>
+        </div>
+        <div class="w-val" id="sum-expense">0.00</div>
+      </div>
+
+      <div class="widget-card widget-net">
+        <div class="w-top">
+          <span class="material-icons-round w-icon">account_balance_wallet</span>
+          <div class="w-label">คงเหลือ</div>
+        </div>
+        <div class="w-val" id="sum-net">0.00</div>
       </div>
     </div>
-  </nav>
 
-  <div class="container">
-    
-    <section class="stats-grid">
-      <div class="stat-card card-income">
-        <div class="stat-label">รายรับ</div>
-        <div class="stat-val c-green" id="sum-income">0.00</div>
-      </div>
-      <div class="stat-card card-expense">
-        <div class="stat-label">รายจ่าย</div>
-        <div class="stat-val c-red" id="sum-expense">0.00</div>
-      </div>
-      <div class="stat-card card-net">
-        <div class="stat-label">คงเหลือ</div>
-        <div class="stat-val c-blue" id="sum-net">0.00</div>
-      </div>
-    </section>
-
-    <section class="main-card">
-      <div class="card-header">
+    <section class="ios-card">
+      <div class="card-head">
         <div class="card-title">
-          <span class="material-icons-round" style="color:var(--primary);">edit_note</span>
-          บันทึกรายการ
+          <span class="material-icons-round" style="color:#A18CD1;">add_circle</span>
+          บันทึกใหม่
         </div>
-        <a href="manage.html" style="text-decoration:none; font-size:13px; color:#64748b; display:flex; align-items:center; gap:4px;">
-          <span class="material-icons-round" style="font-size:16px;">settings</span> ตั้งค่าหมวดหมู่
+        <a href="manage.html" class="setting-link">
+          <span class="material-icons-round" style="font-size:14px;">settings</span> หมวดหมู่
         </a>
       </div>
 
-      <form id="entry-form">
-        <div class="form-grid">
-          <div>
-            <label class="input-label">วันที่</label>
-            <input type="date" id="date" class="modern-input" required>
-          </div>
-          <div>
-            <label class="input-label">ชื่อรายการ</label>
-            <input type="text" id="item" class="modern-input" placeholder="ระบุชื่อรายการ..." required>
-          </div>
-          
-          <div class="full-width">
-            <label class="input-label">หมวดหมู่ <span style="font-weight:400; color:#94a3b8; font-size:11px;">(กด Ctrl เลือกหลายอัน)</span></label>
-            <select id="category" class="modern-input" multiple required>
-              <option value="">กำลังโหลด...</option>
-            </select>
-          </div>
-          
-          <div>
-             <label class="input-label" style="color:#15803d;">รายรับ (+)</label>
-             <input type="number" id="income" class="modern-input inp-inc" placeholder="0.00" min="0" step="0.01">
-          </div>
-          <div>
-             <label class="input-label" style="color:#b91c1c;">รายจ่าย (-)</label>
-             <input type="number" id="expense" class="modern-input inp-exp" placeholder="0.00" min="0" step="0.01">
-          </div>
+      <form id="entry-form" class="form-stack">
+        <div class="input-group">
+          <label>วันที่</label>
+          <input type="date" id="date" class="ios-input" required>
+        </div>
 
-          <div>
-            <label class="input-label">วิธีชำระเงิน</label>
-            <select id="method" class="modern-input" required>
-              <option value="">กำลังโหลด...</option>
-            </select>
+        <div class="input-group">
+          <label>รายการ</label>
+          <input type="text" id="item" class="ios-input" placeholder="เช่น ค่ากาแฟ..." required>
+        </div>
+
+        <div class="input-group">
+          <label>หมวดหมู่ (เลือกได้หลายข้อ)</label>
+          <select id="category" class="ios-input" multiple required>
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+          <div class="input-group">
+             <label style="color:#2ecc71;">รายรับ (+)</label>
+             <input type="number" id="income" class="ios-input inp-green" placeholder="0.00" min="0" step="0.01">
           </div>
-          <div>
-            <label class="input-label">หมายเหตุ</label>
-            <input type="text" id="note" class="modern-input" placeholder="รายละเอียดเพิ่มเติม...">
+          <div class="input-group">
+             <label style="color:#e74c3c;">รายจ่าย (-)</label>
+             <input type="number" id="expense" class="ios-input inp-red" placeholder="0.00" min="0" step="0.01">
           </div>
         </div>
 
-        <div style="margin-top:24px;">
-          <button type="submit" class="btn-submit">
-            <span class="material-icons-round">save</span> บันทึกรายการ
-          </button>
-          <button type="reset" class="btn-clear">ล้างค่า</button>
+        <div class="input-group">
+          <label>วิธีจ่าย</label>
+          <select id="method" class="ios-input" required>
+             <option value="">Loading...</option>
+          </select>
         </div>
+
+        <div class="input-group">
+          <label>โน้ตช่วยจำ</label>
+          <input type="text" id="note" class="ios-input" placeholder="...">
+        </div>
+
+        <button type="submit" class="btn-ios-primary">
+          <span class="material-icons-round">check</span> บันทึก
+        </button>
+        <button type="reset" class="btn-ios-ghost">ล้างค่า</button>
       </form>
     </section>
 
-    <section class="main-card">
-      <div class="card-header">
-        <div class="card-title">
-          <span class="material-icons-round" style="color:var(--primary);">history</span>
-          ประวัติรายการ
-        </div>
+    <section>
+      <div style="margin-bottom:12px; font-size:18px; font-weight:700; color:#555; padding-left:4px;">
+        รายการล่าสุด
       </div>
 
-      <div class="table-controls">
-        <div class="search-wrap">
-          <span class="material-icons-round search-icon">search</span>
-          <input type="text" id="filter-text" class="modern-input" placeholder="ค้นหาชื่อ, ยอดเงิน, หมวดหมู่..." style="padding-left:40px;">
+      <div class="filter-box">
+        <input type="month" id="filter-month" class="ios-input" style="width:auto; padding:10px;">
+        <div class="search-pill">
+           <span class="material-icons-round" style="color:#ccc;">search</span>
+           <input type="text" id="filter-text" placeholder="ค้นหา...">
         </div>
-        <input type="month" id="filter-month" class="modern-input" style="width:auto;">
-        
         <div style="display:none;">
-          <select id="filter-category"></select>
-          <select id="filter-method"></select>
+           <select id="filter-category"></select>
+           <select id="filter-method"></select>
         </div>
-        
-        <button id="clear-filter" class="action-btn btn-edit-row" style="width:42px; height:42px;" title="รีเซ็ต">
-          <span class="material-icons-round">refresh</span>
+        <button id="clear-filter" style="background:white; border:none; border-radius:50%; width:44px; box-shadow:0 2px 10px rgba(0,0,0,0.05); color:#999;">
+           <span class="material-icons-round">refresh</span>
         </button>
       </div>
 
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr>
-              <th width="15%">วันที่ / เวลา</th>
-              <th width="20%">รายการ</th>
-              <th width="20%">หมวดหมู่</th> <th width="10%" style="text-align:right">รายรับ</th>
-              <th width="10%" style="text-align:right">รายจ่าย</th>
-              <th width="10%">วิธี</th>
-              <th width="15%" style="text-align:center">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody id="table-body">
-            </tbody>
-        </table>
-      </div>
+      <div id="table-body" class="list-container">
+         </div>
 
-      <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center; font-size:13px; color:#64748b;">
-        <div style="display:flex; align-items:center; gap:6px;">
-          แสดง 
-          <select id="page-size" style="padding:2px 6px; border:1px solid #cbd5e1; border-radius:4px;">
-            <option value="5">5</option>
-            <option value="10" selected>10</option>
-            <option value="20">20</option>
-          </select>
-        </div>
-        <div id="pagination-controls" style="display:flex; gap:6px;"></div>
+      <div id="pagination-controls" style="display:flex; justify-content:center; gap:12px; margin-top:24px;">
       </div>
+      <select id="page-size" style="display:none;"><option value="10" selected>10</option></select>
+
     </section>
 
-    <footer class="footer">
-      <p style="font-weight:500;">Copyright © 2024 Yutthapong R. All rights reserved.</p>
-      <p style="opacity:0.6;">Developed by Yutthapong R.</p>
+    <footer class="ios-footer">
+      Copyright © 2024 Yutthapong R.<br>Design for iOS Experience
     </footer>
 
   </div>
 
   <script type="module" src="main.js"></script>
+
 </body>
 </html>
