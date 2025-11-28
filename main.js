@@ -1,4 +1,4 @@
-// --- main.js (Fixed Layout Action Buttons) ---
+// --- main.js (Text Only Version) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -8,7 +8,7 @@ let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
 let editingId = null;
-let selectedCategories = []; // สำหรับ Chips
+let selectedCategories = [];
 const recordsCol = collection(db, "records"); 
 
 // Global variable for master data
@@ -25,13 +25,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Helper: Color Palettes
 function getColorForCategory(name) {
     const palettes = [
-        { bg: "#E0E7FF", text: "#4338ca" }, // Indigo
-        { bg: "#DCFCE7", text: "#15803D" }, // Green
-        { bg: "#FFEDD5", text: "#C2410C" }, // Orange
-        { bg: "#FCE7F3", text: "#BE185D" }, // Pink
-        { bg: "#FEF3C7", text: "#B45309" }, // Amber
-        { bg: "#E0F2FE", text: "#0369A1" }, // Sky
-        { bg: "#F3E8FF", text: "#7E22CE" }  // Purple
+        { bg: "#E0E7FF", text: "#4338ca" },
+        { bg: "#DCFCE7", text: "#15803D" },
+        { bg: "#FFEDD5", text: "#C2410C" },
+        { bg: "#FCE7F3", text: "#BE185D" },
+        { bg: "#FEF3C7", text: "#B45309" },
+        { bg: "#E0F2FE", text: "#0369A1" },
+        { bg: "#F3E8FF", text: "#7E22CE" }
     ];
     const index = name.charCodeAt(0) % palettes.length;
     return palettes[index];
@@ -70,7 +70,6 @@ window.editRecord = function(id) {
     document.getElementById("date").value = rec.date;
     document.getElementById("item").value = rec.item;
     
-    // Set Chips Active
     selectedCategories = Array.isArray(rec.category) ? rec.category : [rec.category];
     renderCategoryChips(); 
 
@@ -86,16 +85,15 @@ window.editRecord = function(id) {
 
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<i class="material-icons">edit</i> บันทึกการแก้ไข';
+    submitBtn.innerHTML = 'บันทึกการแก้ไข'; // ใช้ข้อความตรงๆ
     submitBtn.classList.add("edit-mode");
     
-    // Scroll to form
     document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
 }
 
 function resetSubmitButton() {
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<i class="material-icons">save</i> บันทึกข้อมูล';
+    submitBtn.innerHTML = 'บันทึกข้อมูล';
     submitBtn.classList.remove("edit-mode");
 }
 
@@ -104,7 +102,6 @@ async function loadMasterData() {
     const filterCat = document.getElementById("filter-category");
     const filterMethod = document.getElementById("filter-method");
 
-    // Helper for dropdowns
     const fillSelect = (el, items) => {
         if(!el) return;
         el.innerHTML = '<option value="">ทั้งหมด</option>';
@@ -135,7 +132,6 @@ async function loadMasterData() {
     } catch(e) { console.error(e); }
 }
 
-// --- Render Chips ---
 function renderCategoryChips() {
     const container = document.getElementById("category-container");
     if(!container) return;
@@ -148,7 +144,7 @@ function renderCategoryChips() {
         
         if (selectedCategories.includes(cat)) {
             btn.classList.add("active");
-            btn.innerHTML = `<i class="material-icons" style="font-size:16px;">check</i> ${cat}`;
+            btn.textContent = `✓ ${cat}`; // ใช้ติ๊กถูกแบบ Text
         }
 
         btn.onclick = () => {
@@ -174,13 +170,11 @@ function applyFilters() {
 
     filteredRecords = allRecords.filter(r => {
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
-        
         let matchCat = true;
         if (fCat) {
             if (Array.isArray(r.category)) matchCat = r.category.includes(fCat);
             else matchCat = r.category === fCat;
         }
-
         const matchMethod = fMethod ? r.method === fMethod : true;
         const catText = Array.isArray(r.category) ? r.category.join(" ") : (r.category || "");
         
@@ -248,8 +242,8 @@ function renderList() {
             
             <td style="text-align:center;">
                <div class="action-group">
-                   <button class="action-btn ab-edit" onclick="window.editRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">edit</i></button>
-                   <button class="action-btn ab-del" onclick="window.deleteRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">delete</i></button>
+                   <button class="btn-small btn-edit" onclick="window.editRecord('${r.id}')">แก้ไข</button>
+                   <button class="btn-small btn-del" onclick="window.deleteRecord('${r.id}')">ลบ</button>
                </div>
             </td>
         `;
@@ -259,13 +253,9 @@ function renderList() {
     const controls = document.getElementById("pagination-controls");
     if(controls) {
         controls.innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="material-icons" style="font-size:16px; color:#64748b;">chevron_left</i>
-        </button>
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer;">ก่อนหน้า</button>
         <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="material-icons" style="font-size:16px; color:#64748b;">chevron_right</i>
-        </button>`;
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer;">ถัดไป</button>`;
     }
 }
 
