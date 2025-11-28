@@ -11,72 +11,63 @@ import {
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// Import เพื่อดึงหมวดหมู่ (Master Data) เหมือนเดิม
 import { getDocs } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
 // ตัวแปร Global
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
-const recordsCol = collection(db, "records"); // ชื่อ Collection ที่จะเก็บรายการ
+const recordsCol = collection(db, "records"); 
 
-// เริ่มทำงานเมื่อโหลดหน้าเว็บ
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. โหลด Master Data (หมวดหมู่/วิธีจ่าย)
+    // 1. โหลด Master Data
     await loadMasterData();
 
-    // 2. ตั้งค่าวันที่ปัจจุบันในฟอร์ม
+    // 2. ตั้งค่าวันที่ปัจจุบัน
     const dateInput = document.getElementById('date');
     if(dateInput) dateInput.valueAsDate = new Date();
 
-    // 3. เชื่อมต่อ Firebase เพื่อดึงรายการ (Real-time)
+    // 3. เชื่อมต่อ Firebase (Real-time)
     subscribeToFirestore();
 
-    // 4. ผูกปุ่มกดต่างๆ
+    // 4. ผูกปุ่มกดและช่องค้นหา (แก้ไขใหม่)
     setupEventListeners();
 });
 
-// --- ส่วนจัดการ Firebase (Transactions: รายรับรายจ่าย) ---
-
-// ฟังข้อมูลจาก Firebase แบบ Real-time (ข้อมูลเปลี่ยน ตารางเปลี่ยนทันที)
+// --- Firebase: Subscribe ข้อมูลรายรับรายจ่าย ---
 function subscribeToFirestore() {
-    // เรียงตามวันที่ (Date) จากใหม่ไปเก่า
     const q = query(recordsCol, orderBy("date", "desc"));
 
-    // onSnapshot จะทำงานทุกครั้งที่มีการเพิ่ม/ลบ/แก้ไข ข้อมูลใน Database
     onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ 
             id: d.id, 
             ...d.data() 
         }));
         
-        // เมื่อได้ข้อมูลมาแล้ว ให้สั่งกรองและแสดงผลทันที
+        // เมื่อข้อมูลใหม่มา ให้กรองและแสดงผลทันที
         applyFilters();
     }, (error) => {
         console.error("Error watching records:", error);
-        // กรณี Permission Denied หรือเน็ตหลุด
         const tbody = document.getElementById("table-body");
         if(tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">โหลดข้อมูลไม่สำเร็จ (ตรวจสอบ Internet หรือ Security Rules)</td></tr>`;
     });
 }
 
-// เพิ่มรายการลง Firebase
+// --- Firebase: Add Record ---
 export async function addRecord(rec) {
     try {
-        // เพิ่ม timestamp เพื่อใช้ดูเวลาบันทึกจริงได้ (optional)
         rec.createdAt = serverTimestamp();
-        
         await addDoc(recordsCol, rec);
-        alert("✅ บันทึกข้อมูลขึ้น Cloud เรียบร้อย");
+        alert("✅ บันทึกข้อมูลเรียบร้อย");
     } catch (err) {
         console.error("Error adding record:", err);
         alert("❌ บันทึกไม่สำเร็จ: " + err.message);
     }
 }
 
-// ลบรายการจาก Firebase
+// --- Firebase: Delete Record ---
 window.deleteRecord = async function(id) {
-    if(!confirm("ต้องการลบรายการนี้จากฐานข้อมูลใช่หรือไม่?")) return;
+    if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
     try {
         await deleteDoc(doc(db, "records", id));
     } catch (err) {
@@ -85,7 +76,7 @@ window.deleteRecord = async function(id) {
     }
 }
 
-// --- ส่วนจัดการ Firebase (Master Data: หมวดหมู่/วิธีจ่าย) ---
+// --- Master Data (หมวดหมู่ / วิธีจ่าย) ---
 async function loadMasterData() {
     const catSelect = document.getElementById("category");
     const methodSelect = document.getElementById("method");
@@ -125,23 +116,25 @@ async function loadMasterData() {
     }
 }
 
-// --- ฟังก์ชันเปลี่ยนหน้า (Pagination) ---
+// --- Pagination ---
 window.changePage = function(delta) {
     currentPage += delta;
     renderTable();
 }
 
-// --- ส่วนการกรองและแสดงผล (Logic เดิม) ---
+// --- Core Logic: Apply Filters ---
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
     const fCat = document.getElementById("filter-category")?.value;
     const fMethod = document.getElementById("filter-method")?.value;
-    const fText = document.getElementById("filter-text")?.value.toLowerCase();
+    const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
         const matchCat = fCat ? r.category === fCat : true;
         const matchMethod = fMethod ? r.method === fMethod : true;
+        
+        // ค้นหาทั้งใน ชื่อรายการ (item) และ หมายเหตุ (note)
         const matchText = fText ? (
             (r.item || "").toLowerCase().includes(fText) || 
             (r.note || "").toLowerCase().includes(fText)
@@ -155,13 +148,11 @@ function applyFilters() {
     updateSummary();
 }
 
+// --- Render Table ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
     if(!tbody) return;
     tbody.innerHTML = "";
-
-    // หมายเหตุ: allRecords ถูกเรียงจาก Firebase มาแล้ว แต่ถ้ากรองแล้วอยากเรียงอีกรอบก็ได้
-    // filteredRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
 
     const pageSizeEl = document.getElementById("page-size");
     const pageSize = pageSizeEl ? parseInt(pageSizeEl.value) : 10;
@@ -228,8 +219,9 @@ function formatNumber(num) {
     return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// --- Setup Event Listeners ---
+// --- Setup Event Listeners (แก้ไขส่วนนี้) ---
 function setupEventListeners() {
+    // 1. Form Submit
     const form = document.getElementById("entry-form");
     if(form) {
         form.addEventListener("submit", (e) => {
@@ -249,15 +241,29 @@ function setupEventListeners() {
         });
     }
 
+    // 2. Filter Inputs (ทำให้พิมพ์แล้วค้นหาทันที)
+    const filterText = document.getElementById("filter-text");
+    if (filterText) {
+        // ใช้ event 'input' เพื่อให้ทำงานทันทีที่พิมพ์
+        filterText.addEventListener("input", applyFilters);
+    }
+
+    // 3. Dropdowns (เปลี่ยนแล้วค้นหาทันที)
+    document.getElementById("filter-month")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-category")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-method")?.addEventListener("change", applyFilters);
+
+    // 4. ปุ่มค้นหา (เผื่อคนอยากกด) และปุ่มล้าง
     document.getElementById("apply-filter")?.addEventListener("click", applyFilters);
     document.getElementById("clear-filter")?.addEventListener("click", () => {
         document.getElementById("filter-month").value = "";
         document.getElementById("filter-category").value = "";
         document.getElementById("filter-method").value = "";
-        document.getElementById("filter-text").value = "";
+        if(filterText) filterText.value = "";
         applyFilters();
     });
 
+    // 5. Page Size
     document.getElementById("page-size")?.addEventListener("change", () => {
         currentPage = 1;
         renderTable();
