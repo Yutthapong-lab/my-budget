@@ -1,8 +1,223 @@
-</main>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>จัดการหมวดหมู่ & วิธีจ่าย / รับ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --accent: #2563eb;
+      --accent-soft: #e0edff;
+      --accent-soft-border: #bfdbfe;
+      --danger: #ef4444;
+      --text-main: #0f172a;
+      --text-sub: #6b7280;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; padding: 0;
+      font-family: "Kanit", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top, #e0edff 0, #f9fafb 45%);
+      color: var(--text-main); font-size: 15px; line-height: 1.5;
+    }
+
+    .page { min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(12px); background: rgba(255, 255, 255, 0.9); border-bottom: 1px solid #e5e7eb; }
+    .topbar-inner { max-width: 900px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand-block { display: flex; flex-direction: column; gap: 2px; }
+    .brand-text-title { font-size: 20px; font-weight: 600; letter-spacing: 0.02em; }
+    .brand-text-sub { font-size: 13px; color: var(--text-sub); }
+    .topbar-link { border-radius: 999px; padding: 8px 14px; font-size: 13px; border: 1px solid #d1d5db; color: var(--text-main); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: #f9fafb; transition: 0.15s; white-space: nowrap; }
+    .topbar-link:hover { background: #e5e7eb; transform: translateY(-1px); box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08); }
+    .content { flex: 1; max-width: 900px; margin: 16px auto 24px auto; padding: 0 16px 24px; }
+    .page-header { margin-bottom: 16px; display: flex; flex-direction: column; gap: 4px; }
+    .page-title { font-size: 22px; font-weight: 600; }
+    .page-subtitle { font-size: 14px; color: var(--text-sub); }
+    .card { background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: 0 14px 30px rgba(148, 163, 184, 0.25); padding: 18px 18px 16px; margin-bottom: 16px; border: 1px solid #e5e7eb; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .card-title-wrapper { display: flex; flex-direction: column; gap: 4px; }
+    .card-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); border: 1px solid var(--accent-soft-border); font-size: 12px; color: #1d4ed8; font-weight: 500; }
+    .card-title { font-weight: 600; font-size: 18px; }
+    .card-subtitle { font-size: 14px; color: var(--text-sub); }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .field { display: flex; flex-direction: column; flex: 1 1 260px; min-width: 200px; gap: 6px; }
+    label { font-size: 13px; color: #4b5563; }
+    .inline-input { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .inline-input input[type="text"] { flex: 1 1 220px; min-width: 0; }
+    input[type="text"] { padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid #d1d5db; font-size: 14px; outline: none; background: #f9fafb; transition: 0.15s; }
+    input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4); background: #ffffff; }
+    .btn { border: none; border-radius: 999px; padding: 8px 16px; font-size: 13px; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; white-space: nowrap; font-family: "Kanit", sans-serif; }
+    .btn:active { transform: translateY(0); opacity: 0.95; }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25); }
+    .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+    .btn-secondary { background: #e5e7eb; color: #111827; }
+    .btn-secondary:hover { background: #d1d5db; transform: translateY(-1px); }
+    .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 8px 16px rgba(248, 113, 113, 0.28); }
+    .btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
+    .btn-small { padding: 6px 12px; font-size: 12px; }
+    .btn-group-inline { display: flex; gap: 6px; justify-content: flex-end; }
+    .table-wrapper { overflow-x: auto; margin-top: 10px; border-radius: 14px; border: 1px solid #e5e7eb; background: #f9fafb; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 320px; }
+    thead { background: #f3f4f6; }
+    th, td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
+    th { font-weight: 600; font-size: 12px; color: #4b5563; }
+    tbody tr:nth-child(even) { background: #ffffff; }
+    tbody tr:nth-child(odd) { background: #f9fafb; }
+    .table-empty-text { padding: 10px 12px; font-size: 13px; color: var(--text-sub); }
+    .table-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px 0; gap: 10px; font-size: 13px; color: var(--text-sub); flex-wrap: wrap; }
+    .table-page-size { display: flex; align-items: center; gap: 6px; }
+    .table-page-size select { padding: 4px 8px; border-radius: 999px; border: 1px solid #d1d5db; background: #ffffff; font-size: 13px; font-family: "Kanit", sans-serif; outline: none; }
+    .table-pagination { display: flex; align-items: center; gap: 6px; }
+    .table-pagination button { padding: 4px 10px; border-radius: 999px; border: 1px solid #d1d5db; background: #ffffff; cursor: pointer; font-size: 12px; font-family: "Kanit", sans-serif; transition: 0.15s; }
+    .table-pagination button:hover:not(:disabled) { background: #e5e7eb; transform: translateY(-1px); }
+    .table-pagination button:disabled { opacity: 0.45; cursor: default; }
+
+    @media (max-width: 768px) {
+      .content { padding: 0 12px 20px; }
+      .card { padding: 16px 14px 14px; }
+      .topbar-inner { padding-inline: 12px; }
+      .brand-text-title { font-size: 18px; }
+      .page-title { font-size: 20px; }
+      .topbar-link span.hide-mobile { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand-block">
+        <div class="brand-text-title">จัดการหมวดหมู่ &amp; วิธีจ่าย / รับ</div>
+        <div class="brand-text-sub">แก้รายการตรงนี้ dropdown หน้าแรกจะเปลี่ยนตาม</div>
+      </div>
+      <a href="index.html" class="topbar-link">
+        ⬅️
+        <span class="hide-mobile">กลับไปหน้าบันทึกรายรับ–รายจ่าย</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="page-header">
+      <div class="page-title">ตั้งค่าหมวดหมู่และวิธีจ่าย / รับ</div>
+      <div class="page-subtitle">เพิ่ม / ลบ / แก้ไข รายการที่ใช้บ่อย เพื่อให้บันทึกเงินเข้า–ออกได้เร็วขึ้น</div>
+    </div>
+
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title-wrapper">
+          <div class="card-badge">📂 หมวดหมู่รายรับ–รายจ่าย</div>
+          <div class="card-title">หมวดหมู่</div>
+          <div class="card-subtitle">จัดการหมวดหมู่รายได้–รายจ่ายทั้งหมด</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="new-category-name">เพิ่มหมวดหมู่ใหม่</label>
+          <div class="inline-input">
+            <input type="text" id="new-category-name" placeholder="เช่น ออม, ลงทุน, ค่าเดินทาง ฯลฯ">
+            <button type="button" class="btn btn-primary btn-small" id="add-category">+ เพิ่มหมวดหมู่</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+          <tr>
+            <th>ชื่อหมวดหมู่</th>
+            <th style="text-align: right;">จัดการ</th>
+          </tr>
+          </thead>
+          <tbody id="categories-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        <div class="table-page-size">
+          แสดง
+          <select id="category-page-size">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+          </select>
+          รายการต่อหน้า
+        </div>
+        <div class="table-pagination">
+          <button id="category-prev">ก่อนหน้า</button>
+          <span class="table-page-info" id="category-page-info">หน้า 1 / 1</span>
+          <button id="category-next">ถัดไป</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title-wrapper">
+          <div class="card-badge">💸 ช่องทางรับ–จ่าย</div>
+          <div class="card-title">วิธีจ่าย / รับ</div>
+          <div class="card-subtitle">จัดการช่องทางรับ–จ่ายเงิน เช่น โอน, QR, เงินสด</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="new-method-name">เพิ่มวิธีจ่าย / รับ ใหม่</label>
+          <div class="inline-input">
+            <input type="text" id="new-method-name" placeholder="เช่น พร้อมเพย์, บัตรเครดิตใบที่ 2">
+            <button type="button" class="btn btn-primary btn-small" id="add-method">+ เพิ่มวิธีจ่าย / รับ</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+          <tr>
+            <th>ชื่อวิธีจ่าย / รับ</th>
+            <th style="text-align: right;">จัดการ</th>
+          </tr>
+          </thead>
+          <tbody id="methods-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        <div class="table-page-size">
+          แสดง
+          <select id="method-page-size">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+          </select>
+          รายการต่อหน้า
+        </div>
+        <div class="table-pagination">
+          <button id="method-prev">ก่อนหน้า</button>
+          <span class="table-page-info" id="method-page-info">หน้า 1 / 1</span>
+          <button id="method-next">ถัดไป</button>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
 <script type="module">
-  // Import ค่า config และ library จากที่เดียวกัน
+  // Import ค่า config และ library
   import { db } from "./firebase-config.js";
   import {
     collection,
@@ -14,7 +229,6 @@
     updateDoc
   } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-  // ส่วน logic เดิมของ manage.html (แทบไม่ต้องแก้ แค่เอา initializeApp ออกเพราะทำใน config แล้ว)
   const categoriesCol = collection(db, "categories");
   const methodsCol = collection(db, "methods");
 
@@ -40,13 +254,12 @@
     );
   }
 
-  // ... (ฟังก์ชัน loadMasterData, renderMasterTables, event listeners เดิมทั้งหมด ใช้ต่อได้เลย) ... 
-  // แปะโค้ด JS เดิมของ manage.html ที่เหลือต่อจากนี้ได้เลย
-  
+  // โหลดข้อมูลทั้งหมด
   async function loadMasterData() {
     // categories
     let catSnap = await getDocs(categoriesCol);
     if (catSnap.empty) {
+      // ถ้าไม่มีข้อมูล ให้สร้างค่าเริ่มต้น
       await Promise.all(
         DEFAULT_CATEGORIES.map(name =>
           addDoc(categoriesCol, { name, createdAt: serverTimestamp() })
@@ -78,7 +291,7 @@
     });
     sortThaiByName(methods);
 
-    // รีเซ็ตหน้า
+    // รีเซ็ตหน้า ถ้าหน้าปัจจุบันเกินจากหน้าสูงสุด
     const catMaxPage = Math.max(1, Math.ceil((categories.length || 1) / categoryPageSize));
     if (categoryPage > catMaxPage) categoryPage = catMaxPage;
 
@@ -88,6 +301,7 @@
     renderMasterTables();
   }
 
+  // แสดงผลตาราง
   function renderMasterTables() {
     const catBody = document.getElementById("categories-table-body");
     const methBody = document.getElementById("methods-table-body");
@@ -96,13 +310,11 @@
     const catPageInfo = document.getElementById("category-page-info");
     const catPrevBtn = document.getElementById("category-prev");
     const catNextBtn = document.getElementById("category-next");
-    const catPageSizeSelect = document.getElementById("category-page-size");
 
     // Elements ควบคุมวิธีจ่าย
     const methodPageInfo = document.getElementById("method-page-info");
     const methodPrevBtn = document.getElementById("method-prev");
     const methodNextBtn = document.getElementById("method-next");
-    const methodPageSizeSelect = document.getElementById("method-page-size");
 
     // --- Render หมวดหมู่ ---
     if (catBody) {
@@ -129,7 +341,7 @@
           catBody.appendChild(tr);
         });
         
-        // ผูก event ปุ่มในตาราง (เพื่อความสะอาดของโค้ด)
+        // ผูก event ปุ่มในตาราง
         catBody.querySelectorAll(".edit-cat-btn").forEach(btn => {
             btn.addEventListener("click", async () => {
                 const id = btn.dataset.id;
@@ -215,34 +427,50 @@
     loadMasterData();
 
     // ปุ่มเพิ่มหมวดหมู่
-    document.getElementById("add-category").addEventListener("click", async () => {
-      const input = document.getElementById("new-category-name");
-      const name = input.value.trim();
-      if (!name) return alert("กรุณากรอกชื่อหมวดหมู่");
-      await addDoc(categoriesCol, { name, createdAt: serverTimestamp() });
-      input.value = "";
-      loadMasterData();
-    });
+    const addCatBtn = document.getElementById("add-category");
+    if(addCatBtn) {
+        addCatBtn.addEventListener("click", async () => {
+          const input = document.getElementById("new-category-name");
+          const name = input.value.trim();
+          if (!name) return alert("กรุณากรอกชื่อหมวดหมู่");
+          await addDoc(categoriesCol, { name, createdAt: serverTimestamp() });
+          input.value = "";
+          loadMasterData();
+        });
+    }
 
     // ปุ่มเพิ่มวิธีจ่าย
-    document.getElementById("add-method").addEventListener("click", async () => {
-      const input = document.getElementById("new-method-name");
-      const name = input.value.trim();
-      if (!name) return alert("กรุณากรอกชื่อวิธีจ่าย");
-      await addDoc(methodsCol, { name, createdAt: serverTimestamp() });
-      input.value = "";
-      loadMasterData();
-    });
+    const addMethBtn = document.getElementById("add-method");
+    if(addMethBtn) {
+        addMethBtn.addEventListener("click", async () => {
+          const input = document.getElementById("new-method-name");
+          const name = input.value.trim();
+          if (!name) return alert("กรุณากรอกชื่อวิธีจ่าย");
+          await addDoc(methodsCol, { name, createdAt: serverTimestamp() });
+          input.value = "";
+          loadMasterData();
+        });
+    }
 
     // ปุ่มเปลี่ยนหน้า
-    document.getElementById("category-prev").onclick = () => { if(categoryPage > 1) { categoryPage--; renderMasterTables(); }};
-    document.getElementById("category-next").onclick = () => { const max = Math.ceil(categories.length/categoryPageSize); if(categoryPage < max) { categoryPage++; renderMasterTables(); }};
-    document.getElementById("method-prev").onclick = () => { if(methodPage > 1) { methodPage--; renderMasterTables(); }};
-    document.getElementById("method-next").onclick = () => { const max = Math.ceil(methods.length/methodPageSize); if(methodPage < max) { methodPage++; renderMasterTables(); }};
+    const catPrev = document.getElementById("category-prev");
+    if(catPrev) catPrev.onclick = () => { if(categoryPage > 1) { categoryPage--; renderMasterTables(); }};
+
+    const catNext = document.getElementById("category-next");
+    if(catNext) catNext.onclick = () => { const max = Math.ceil(categories.length/categoryPageSize); if(categoryPage < max) { categoryPage++; renderMasterTables(); }};
+
+    const methPrev = document.getElementById("method-prev");
+    if(methPrev) methPrev.onclick = () => { if(methodPage > 1) { methodPage--; renderMasterTables(); }};
+
+    const methNext = document.getElementById("method-next");
+    if(methNext) methNext.onclick = () => { const max = Math.ceil(methods.length/methodPageSize); if(methodPage < max) { methodPage++; renderMasterTables(); }};
     
     // เปลี่ยนจำนวนต่อหน้า
-    document.getElementById("category-page-size").onchange = (e) => { categoryPageSize = parseInt(e.target.value); categoryPage = 1; renderMasterTables(); };
-    document.getElementById("method-page-size").onchange = (e) => { methodPageSize = parseInt(e.target.value); methodPage = 1; renderMasterTables(); };
+    const catSize = document.getElementById("category-page-size");
+    if(catSize) catSize.onchange = (e) => { categoryPageSize = parseInt(e.target.value); categoryPage = 1; renderMasterTables(); };
+
+    const methSize = document.getElementById("method-page-size");
+    if(methSize) methSize.onchange = (e) => { methodPageSize = parseInt(e.target.value); methodPage = 1; renderMasterTables(); };
   });
 </script>
 </body>
