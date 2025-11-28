@@ -2,19 +2,16 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>My Budget - Fixed Layout</title>
+  <title>My Budget - Text Version</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
   <style>
     :root {
       --primary: #6366f1;
-      --primary-hover: #4f46e5;
       --text-main: #0f172a;
       --text-sub: #475569;
       --glass-bg: rgba(255, 255, 255, 0.95);
@@ -25,42 +22,17 @@
 
     * { box-sizing: border-box; outline: none; font-family: "Kanit", sans-serif !important; }
 
-    /* Fix Icon Rendering */
-    .material-icons {
-      font-family: 'Material Icons';
-      font-weight: normal;
-      font-style: normal;
-      font-size: 24px;
-      display: inline-block;
-      line-height: 1;
-      text-transform: none;
-      letter-spacing: normal;
-      word-wrap: normal;
-      white-space: nowrap;
-      direction: ltr;
-      vertical-align: middle;
-    }
-
     body {
       margin: 0; padding: 0;
       color: var(--text-main);
       min-height: 100vh;
-      background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
-      background-size: 200% 200%;
-      animation: gradientBG 10s ease infinite;
+      background: #f1f5f9; /* สีพื้นเรียบๆ โหลดไว */
       display: flex; justify-content: center; padding: 40px 20px;
-    }
-
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
     }
 
     .glass-container {
       width: 100%; max-width: 1000px;
       background: var(--glass-bg);
-      backdrop-filter: blur(20px);
       border-radius: var(--radius);
       box-shadow: var(--shadow-xl);
       border: var(--glass-border);
@@ -70,8 +42,7 @@
 
     /* Header */
     .header-section { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px; }
-    .brand-title { font-size: 28px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px; }
-    .brand-title i { font-size: 36px; }
+    .brand-title { font-size: 28px; font-weight: 800; color: var(--primary); }
 
     /* Stats Bar */
     .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 600px; }
@@ -89,11 +60,9 @@
     /* Form Section */
     .form-card { background: #fff; padding: 24px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
     .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px dashed #cbd5e1; }
-    .fh-title { font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
-    .fh-title i { color: var(--primary); font-size: 24px; }
+    .fh-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
     
-    .setting-link { font-size: 13px; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px; background: #eef2ff; padding: 4px 12px; border-radius: 8px; font-weight: 500; }
-    .setting-link i { font-size: 16px; }
+    .setting-link { font-size: 13px; color: var(--primary); text-decoration: none; background: #eef2ff; padding: 6px 12px; border-radius: 8px; font-weight: 500; }
 
     .form-layout { display: grid; grid-template-columns: 160px 1fr 1fr; gap: 20px; align-items: start; }
     .input-wrapper { display: flex; flex-direction: column; gap: 6px; }
@@ -103,8 +72,7 @@
       width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1;
       background: #f8fafc; font-size: 15px; color: #0f172a; height: 44px;
     }
-    .std-input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
-    .std-input:disabled { background: #f1f5f9; cursor: not-allowed; color: #94a3b8; }
+    .std-input:focus { background: #fff; border-color: var(--primary); }
 
     /* Category Chips */
     .category-container {
@@ -114,14 +82,11 @@
     .cat-chip-btn {
       border: 1px solid #e2e8f0; background: #fff; color: #64748b;
       padding: 6px 14px; border-radius: 50px; font-size: 13px; cursor: pointer;
-      font-weight: 500; display: flex; align-items: center; gap: 6px;
+      font-weight: 500;
     }
-    .cat-chip-btn:hover { background: #f1f5f9; transform: translateY(-1px); }
     .cat-chip-btn.active {
       background: var(--primary); color: #fff; border-color: var(--primary);
-      box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
     }
-    .cat-chip-btn i { font-size: 16px; }
 
     .money-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .inp-inc { background: #f0fdf4; border-color: #86efac; color: #166534; font-weight: 700; }
@@ -130,11 +95,9 @@
     .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 10px; }
     .btn-main {
       background: var(--primary); color: #fff; border: none; padding: 10px 24px; border-radius: 10px;
-      font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+      font-size: 15px; font-weight: 600; cursor: pointer;
     }
-    .btn-main:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35); }
-    .btn-main.edit-mode { background: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25); }
+    .btn-main.edit-mode { background: #f59e0b; }
     .btn-sec {
       background: #fff; border: 1px solid #cbd5e1; color: #475569; padding: 10px 20px; border-radius: 10px;
       font-weight: 600; cursor: pointer;
@@ -143,7 +106,7 @@
     /* Table Section */
     .table-card { background: #fff; padding: 0; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; }
     .table-toolbar { padding: 20px; background: #fcfcfc; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px; }
-    .tbl-title { font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    .tbl-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
     
     .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .dropdown-filter {
@@ -151,62 +114,34 @@
       background: #fff; font-size: 13px; color: #334155; cursor: pointer; height: 40px;
     }
     
-    .search-box { position: relative; flex: 1; min-width: 200px; display: flex; align-items: center; }
+    .search-box { flex: 1; min-width: 200px; display: flex; }
     .search-box input {
-      width: 100%; padding-left: 40px; border-radius: 50px; border: 1px solid #cbd5e1; height: 40px; background: #fff; font-size: 14px;
+      width: 100%; padding: 0 16px; border-radius: 10px; border: 1px solid #cbd5e1; height: 40px; background: #fff; font-size: 14px;
     }
-    .search-icon { position: absolute; left: 12px; color: #94a3b8; font-size: 20px; }
 
     .btn-refresh {
-      width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-      cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+      cursor: pointer; font-size: 13px;
     }
-    .btn-refresh:hover { background: #f1f5f9; color: var(--primary); }
-    .btn-refresh i { font-size: 20px; }
 
-    /* Table & Tags */
     .table-wrapper { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
     thead { background: #f8fafc; }
     th { text-align: left; padding: 16px; color: #475569; font-size: 13px; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
-    td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; color: #1e293b; }
+    td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; color: #1e293b; }
     tr:hover { background: #f8fafc; }
 
-    .tags-wrapper { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .tags-wrapper { display: flex; flex-wrap: wrap; gap: 6px; }
     .cat-pill { display: inline-block; white-space: nowrap; padding: 4px 10px; border-radius: 50px; font-size: 12px; font-weight: 600; }
+    .badge-method { padding: 4px 8px; border-radius: 4px; background: #f1f5f9; border: 1px solid #e2e8f0; font-size: 12px; }
 
-    .badge-method {
-      display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px;
-      background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-weight: 500; white-space: nowrap;
+    /* ปุ่ม Action แบบข้อความ */
+    .action-group { display: flex; gap: 8px; justify-content: center; }
+    .btn-small {
+      padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid transparent;
     }
-    
-    /* --- FIX: Action Buttons Layout --- */
-    .action-group {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 6px; /* ระยะห่างระหว่างปุ่ม */
-    }
-
-    .action-btn {
-      /* min-width ช่วยให้ปุ่มยืดขยายได้ถ้าฟอนต์ไม่โหลด */
-      min-width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      border: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: 0.2s;
-      padding: 0 8px; /* เพิ่ม padding ให้มีพื้นที่ถ้าเป็นตัวหนังสือ */
-    }
-    .action-btn i { font-size: 18px; }
-
-    .ab-edit { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
-    .ab-edit:hover { background: #ffedd5; }
-    .ab-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-    .ab-del:hover { background: #fee2e2; }
+    .btn-edit { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+    .btn-del { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
 
     .footer { text-align: center; font-size: 12px; color: #64748b; margin-top: 20px; }
 
@@ -222,10 +157,7 @@
   <div class="glass-container">
     
     <header class="header-section">
-      <div class="brand-title">
-        <i class="material-icons">donut_small</i>
-        My Budget
-      </div>
+      <div class="brand-title">My Budget</div>
 
       <div class="stats-bar">
         <div class="stat-box">
@@ -245,12 +177,8 @@
 
     <section class="form-card">
       <div class="form-header">
-        <div class="fh-title">
-          <i class="material-icons">edit_note</i> บันทึกรายการ
-        </div>
-        <a href="manage.html" class="setting-link">
-          <i class="material-icons">settings</i> จัดการหมวดหมู่
-        </a>
+        <div class="fh-title">บันทึกรายการ</div>
+        <a href="manage.html" class="setting-link">จัดการหมวดหมู่</a>
       </div>
 
       <form id="entry-form" class="form-layout">
@@ -264,7 +192,7 @@
         </div>
 
         <div class="input-wrapper" style="grid-column: 1 / -1;">
-          <label class="lbl">หมวดหมู่ <span style="font-weight:400; color:#94a3b8; font-size:12px;">(เลือกได้หลายข้อ)</span></label>
+          <label class="lbl">หมวดหมู่</label>
           <div id="category-container" class="category-container">
              <span style="font-size:13px; color:#94a3b8;">กำลังโหลด...</span>
           </div>
@@ -297,31 +225,25 @@
 
         <div class="form-actions" style="grid-column: 1 / -1;">
            <button type="reset" class="btn-sec">ล้างค่า</button>
-           <button type="submit" class="btn-main">
-             <i class="material-icons">save</i> บันทึกข้อมูล
-           </button>
+           <button type="submit" class="btn-main">บันทึกข้อมูล</button>
         </div>
       </form>
     </section>
 
     <section class="table-card">
       <div class="table-toolbar">
-        <div class="tbl-title"><i class="material-icons" style="vertical-align:middle;">history</i> ประวัติรายการ</div>
+        <div class="tbl-title">ประวัติรายการ</div>
         
         <div class="filter-row">
            <input type="month" id="filter-month" class="dropdown-filter">
-           
            <select id="filter-category" class="dropdown-filter" style="min-width:120px;"></select>
            <select id="filter-method" class="dropdown-filter" style="min-width:120px;"></select>
 
            <div class="search-box">
-             <i class="material-icons search-icon">search</i>
-             <input type="text" id="filter-text" placeholder="ค้นหา...">
+             <input type="text" id="filter-text" placeholder="ค้นหาชื่อรายการ...">
            </div>
            
-           <button id="clear-filter" class="btn-refresh" title="รีเซ็ต">
-             <i class="material-icons">refresh</i>
-           </button>
+           <button id="clear-filter" class="btn-refresh">รีเซ็ตตัวกรอง</button>
         </div>
       </div>
 
@@ -329,7 +251,7 @@
         <table>
           <thead>
             <tr>
-              <th width="15%">วันที่ / เวลา</th>
+              <th width="15%">วันที่</th>
               <th width="20%">รายการ</th>
               <th width="20%">หมวดหมู่</th>
               <th width="10%" style="text-align:right;">รายรับ</th>
