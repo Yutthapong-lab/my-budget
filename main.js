@@ -1,4 +1,4 @@
-// --- main.js (Fixed Icons & Tag Layout) ---
+// --- main.js (Fixed Layout Action Buttons) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -224,7 +224,6 @@ function renderList() {
         catHtml = cats.map(c => {
             if(!c) return "";
             const color = getColorForCategory(c);
-            // FIXED: Tag wrapped with style
             return `<span class="cat-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
         }).join("");
 
@@ -246,9 +245,12 @@ function renderList() {
             <td style="text-align:right; color:#16a34a; font-weight:700;">${incVal}</td>
             <td style="text-align:right; color:#dc2626; font-weight:700;">${expVal}</td>
             <td style="text-align:center;"><span class="badge-method">${r.method}</span></td>
+            
             <td style="text-align:center;">
-               <button class="action-btn ab-edit" onclick="window.editRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">edit</i></button>
-               <button class="action-btn ab-del" onclick="window.deleteRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">delete</i></button>
+               <div class="action-group">
+                   <button class="action-btn ab-edit" onclick="window.editRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">edit</i></button>
+                   <button class="action-btn ab-del" onclick="window.deleteRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">delete</i></button>
+               </div>
             </td>
         `;
         container.appendChild(tr);
@@ -257,9 +259,13 @@ function renderList() {
     const controls = document.getElementById("pagination-controls");
     if(controls) {
         controls.innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;"><i class="material-icons" style="font-size:16px; color:#64748b;">chevron_left</i></button>
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <i class="material-icons" style="font-size:16px; color:#64748b;">chevron_left</i>
+        </button>
         <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;"><i class="material-icons" style="font-size:16px; color:#64748b;">chevron_right</i></button>`;
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <i class="material-icons" style="font-size:16px; color:#64748b;">chevron_right</i>
+        </button>`;
     }
 }
 
