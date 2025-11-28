@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>บันทึกรายรับรายจ่าย (Local)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* CSS เดิมทั้งหมดของคุณ */
+    :root {
+      --card-bg: #ffffff;
+      --card-border: #e5e7eb;
+      --accent: #2563eb;
+      --danger: #ef4444;
+      --text-main: #0f172a;
+      --text-muted: #6b7280;
+      --radius-xl: 22px;
+      --radius-md: 10px;
+      --shadow-soft: 0 18px 40px rgba(148, 163, 184, 0.22);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: "Kanit", system-ui, -apple-system, sans-serif;
+      font-size: 16px; line-height: 1.6;
+      background: radial-gradient(circle at top, #fce7f3 0, #eff6ff 40%, #ecfeff 70%, #fef9c3 100%);
+      color: var(--text-main); min-height: 100vh;
+    }
+    .bg-orb { position: fixed; border-radius: 999px; pointer-events: none; filter: blur(40px); opacity: 0.25; mix-blend-mode: soft-light; z-index: 0; }
+    .orb1 { width: 420px; height: 420px; top: -120px; left: -60px; background: radial-gradient(circle at 30% 30%, #fb7185, #fb923c); animation: floatOrb1 30s ease-in-out infinite alternate; }
+    .orb2 { width: 380px; height: 380px; top: 40%; right: -140px; background: radial-gradient(circle at 30% 30%, #38bdf8, #a855f7); animation: floatOrb2 34s ease-in-out infinite alternate; }
+    .orb3 { width: 280px; height: 280px; top: 78%; left: 12%; background: radial-gradient(circle at 30% 30%, #facc15, #38bdf8); animation: floatOrb3 32s ease-in-out infinite alternate; }
+    @keyframes floatOrb1 { from {transform:translate3d(0,0,0) scale(1);} to {transform:translate3d(40px,40px,0) scale(1.07);} }
+    @keyframes floatOrb2 { from {transform:translate3d(0,0,0) scale(1);} to {transform:translate3d(-50px,-20px,0) scale(1.04);} }
+    @keyframes floatOrb3 { from {transform:translate3d(0,0,0) scale(0.96);} to {transform:translate3d(30px,-30px,0) scale(1.02);} }
+    .topbar { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(14px); background: rgba(255, 255, 255, 0.94); border-bottom: 1px solid rgba(226, 232, 240, 0.9); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); }
+    .topbar-inner { max-width: 1100px; margin: 0 auto; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .brand-logo { width: 32px; height: 32px; border-radius: 12px; background: radial-gradient(circle at 30% 20%, #bfdbfe, #6366f1); display:inline-flex; align-items:center; justify-content:center; color:#fff; font-weight:700; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.28); }
+    .brand-text-title { font-size: 18px; font-weight: 600; }
+    .brand-text-sub { font-size: 13px; color: var(--text-muted); }
+    .topbar-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .topbar-link { border-radius:999px; padding:7px 13px; font-size:13px; border:1px solid #d1d5db; color:var(--text-main); text-decoration:none; display:inline-flex; align-items:center; gap:6px; background:#f9fafb; transition:0.15s; white-space:nowrap; }
+    .topbar-link:hover { background:#eef2ff; border-color:#c7d2fe; transform:translateY(-1px); box-shadow:0 10px 22px rgba(148, 163, 184, 0.4); }
+    .content { flex:1; max-width:1100px; margin:16px auto 24px auto; padding:0 16px 24px; display:flex; flex-direction:column; gap:16px; }
+    .card { position:relative; background:var(--card-bg); border-radius:var(--radius-xl); border:1px solid var(--card-border); padding:18px 20px 16px; box-shadow:var(--shadow-soft); overflow:hidden; }
+    .card::before { content:""; position:absolute; inset:-80px; opacity:0.06; background: radial-gradient(circle at 0 0, #93c5fd 0, transparent 55%), radial-gradient(circle at 100% 0, #a5b4fc 0, transparent 55%); pointer-events:none; }
+    .card-inner { position:relative; z-index:1; }
+    .card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; }
+    .card-title { font-size:16px; font-weight:600; }
+    .card-subtitle { font-size:13px; color:var(--text-muted); }
+    .summary-bar { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; font-size:13px; }
+    .summary-item { border-radius:999px; padding:4px 9px; background:#eef2ff; border:1px solid #e0e7ff; font-size:12px; }
+    .card-form { backdrop-filter: blur(10px); background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,246,255,0.96)); border: 1px solid rgba(191, 219, 254, 0.9); }
+    .card-form .card-header { margin-bottom: 16px; }
+    .form-tag { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: #eef2ff; border: 1px solid #e0e7ff; color: #4f46e5; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
+    .field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+    .field label { font-size:13px; color:var(--text-muted); }
+    .field-note { grid-column: span 2; }
+    .field-actions { grid-column: span 2; align-self: flex-end; justify-self: flex-end; text-align: right; }
+    input, select, textarea { border-radius:var(--radius-md); border:1px solid #d1d5db; padding:7px 9px; font-family:inherit; font-size:13px; background:rgba(255,255,255,0.98); outline:none; transition:0.16s; }
+    input:focus, select:focus, textarea:focus { border-color:#2563eb; box-shadow:0 0 0 1px rgba(37, 99, 235, 0.25); background:#ffffff; }
+    textarea { resize:vertical; min-height:32px; }
+    .btn-row { display:flex; flex-wrap:wrap; gap:6px; align-items:center; justify-content:flex-end; }
+    .btn { border-radius:999px; border:none; font-size:13px; padding:7px 13px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:500; transition:0.15s; white-space:nowrap; }
+    .btn-primary { background:var(--accent); color:#ffffff; box-shadow:0 10px 25px rgba(37,99,235,0.45); }
+    .btn-primary:hover { background:#1d4ed8; transform:translateY(-1px); }
+    .btn-secondary { background:rgba(15,23,42,0.04); color:#111827; }
+    .btn-secondary:hover { background:rgba(15,23,42,0.08); }
+    .btn-danger { background:var(--danger); color:#ffffff; box-shadow:0 10px 22px rgba(239,68,68,0.35); }
+    .btn-danger:hover { background:#dc2626; transform:translateY(-1px); }
+    .btn-small { font-size:12px; padding:4px 9px; }
+    .row { display:flex; flex-wrap:wrap; gap:10px 12px; margin-bottom:8px; }
+    .table-wrapper { overflow-x:auto; border-radius:16px; border:1px solid #e5e7eb; background:linear-gradient(to bottom,#f9fafb,#ffffff); }
+    table { width:100%; border-collapse:collapse; font-size:13px; min-width:880px; }
+    th, td { padding:8px 10px; border-bottom:1px solid #e5e7eb; text-align:left; white-space:nowrap; }
+    th { font-weight:600; font-size:13px; color:#4b5563; }
+    tbody tr:nth-child(even) { background:#f9fafb; }
+    tbody tr:hover { background:#eef2ff; }
+    .text-right { text-align:right; }
+    .pill { display:inline-block; border-radius:999px; padding:2px 8px; font-size:12px; font-weight:500; }
+    .table-footer-row { margin-top:8px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; font-size:12px; }
+    #pagination-controls { display:inline-flex; flex-wrap:nowrap; gap:6px; align-items:center; justify-content:flex-end; font-size:12px; }
+    #pagination-controls button { border-radius:999px; border:1px solid #d1d5db; background:#ffffff; padding:4px 8px; font-size:12px; cursor:pointer; }
+    #pagination-controls button:hover:not(:disabled) { background:#eef2ff; }
+    #pagination-controls button:disabled { opacity:0.4; cursor:default; }
+
+    @media (max-width:1000px){ .form-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } .field-note { grid-column: span 3; } .field-actions { grid-column: span 3; justify-self:flex-start; } }
+    @media (max-width:768px){ .content{padding:0 10px 20px;} .card{padding:14px 12px; border-radius:18px;} table{font-size:13px; min-width:720px;} th,td{padding:6px 8px;} .brand-text-title{font-size:16px;} .form-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width:540px){ .form-grid { grid-template-columns: 1fr; } .field-note, .field-actions { grid-column: span 1; } .btn-row { justify-content:flex-start; } }
+  </style>
+</head>
+<body>
+<div class="bg-orb orb1"></div>
+<div class="bg-orb orb2"></div>
+<div class="bg-orb orb3"></div>
+
+<div class="page">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo">฿</div>
+        <div>
+          <div class="brand-text-title">My Budget</div>
+          <div class="brand-text-sub">บันทึกรายรับ–รายจ่ายส่วนตัว</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <a href="manage.html" class="topbar-link">⚙️ จัดการหมวดหมู่ / วิธีจ่าย</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="card card-form">
+      <div class="card-inner">
+        <div class="card-header">
+          <div>
+            <div class="card-title">ฟอร์มบันทึกรายการ</div>
+            <div class="card-subtitle">ระบุวันที่ รายการ หมวดหมู่ และจำนวนเงิน จากนั้นกดบันทึก</div>
+          </div>
+          <div class="form-tag">พร้อมใช้งาน</div>
+        </div>
+
+        <form id="entry-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="date">วันที่</label>
+              <input type="date" id="date" required>
+            </div>
+
+            <div class="field">
+              <label for="item">รายการ</label>
+              <input type="text" id="item" required placeholder="เช่น เงินเดือน, ค่าอาหาร">
+            </div>
+
+            <div class="field">
+              <label for="category">หมวดหมู่</label>
+              <select id="category" required>
+                <option value="">กำลังโหลด...</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="method">วิธีจ่าย / รับ</label>
+              <select id="method" required>
+                <option value="">กำลังโหลด...</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="income">รายรับ (+)</label>
+              <input type="number" id="income" min="0" step="0.01" placeholder="0.00">
+            </div>
+
+            <div class="field">
+              <label for="expense">รายจ่าย (-)</label>
+              <input type="number" id="expense" min="0" step="0.01" placeholder="0.00">
+            </div>
+
+            <div class="field field-note">
+              <label for="note">หมายเหตุ</label>
+              <textarea id="note" placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"></textarea>
+            </div>
+
+            <div class="field field-actions">
+              <div class="btn-row">
+                <button type="submit" class="btn btn-primary">บันทึกรายการ</button>
+                <button type="reset" class="btn btn-secondary">🧹 ล้าง</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-inner">
+        <div class="card-header">
+          <div>
+            <div class="card-title">รายการทั้งหมด</div>
+            <div class="card-subtitle">ข้อมูลรายการถูกบันทึกในเครื่อง (Local Storage) ส่วนหมวดหมู่ดึงจาก Cloud</div>
+          </div>
+          <div class="summary-bar">
+            <div class="summary-item" id="sum-income">รายรับ: 0.00</div>
+            <div class="summary-item" id="sum-expense">รายจ่าย: 0.00</div>
+            <div class="summary-item" id="sum-net">สุทธิ: 0.00</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:8px;">
+          <div class="field" style="max-width:180px;">
+            <label for="filter-month">เดือน</label>
+            <input type="month" id="filter-month">
+          </div>
+          <div class="field" style="max-width:160px;">
+            <label for="filter-category">หมวดหมู่</label>
+            <select id="filter-category"></select>
+          </div>
+          <div class="field" style="max-width:160px;">
+            <label for="filter-method">วิธีจ่าย</label>
+            <select id="filter-method"></select>
+          </div>
+          <div class="field" style="flex:1;">
+            <label for="filter-text">ค้นหา</label>
+            <input type="text" id="filter-text" placeholder="คำค้นหา...">
+          </div>
+          <div class="field" style="flex:0 0 auto; align-self:flex-end;">
+            <div class="btn-row">
+              <button type="button" class="btn btn-secondary" id="apply-filter">🔍 กรอง</button>
+              <button type="button" class="btn btn-secondary" id="clear-filter">❌ ล้าง</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>รายการ</th>
+              <th>หมวดหมู่</th>
+              <th class="text-right">รายรับ</th>
+              <th class="text-right">รายจ่าย</th>
+              <th>วิธี</th>
+              <th>หมายเหตุ</th>
+              <th></th>
+            </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="table-footer-row">
+          <div class="field" style="max-width:100px;">
+            <label>ต่อหน้า</label>
+            <select id="page-size">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+            </select>
+          </div>
+          <div class="field" style="flex:1; text-align:right;">
+             <div id="pagination-controls"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script type="module" src="main.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,249 @@
+</main>
+</div>
+
+<script type="module">
+  // Import ค่า config และ library จากที่เดียวกัน
+  import { db } from "./firebase-config.js";
+  import {
+    collection,
+    addDoc,
+    getDocs,
+    deleteDoc,
+    doc,
+    serverTimestamp,
+    updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
+  // ส่วน logic เดิมของ manage.html (แทบไม่ต้องแก้ แค่เอา initializeApp ออกเพราะทำใน config แล้ว)
+  const categoriesCol = collection(db, "categories");
+  const methodsCol = collection(db, "methods");
+
+  const DEFAULT_CATEGORIES = [
+    "รายได้ประจำ", "รายได้เสริม", "อาหาร", "เดินทาง",
+    "ค่าอยู่บ้าน", "ความบันเทิง", "ของใช้ส่วนตัว", "หนี้ / ผ่อน", "อื่น ๆ"
+  ];
+  const DEFAULT_METHODS = [
+    "โอนเงิน", "สแกนจ่ายผ่านแอปธนาคาร", "Thai QR Payment", "เงินสด", "อื่น ๆ"
+  ];
+
+  let categories = [];
+  let methods = [];
+
+  let categoryPageSize = 5;
+  let categoryPage = 1;
+  let methodPageSize = 5;
+  let methodPage = 1;
+
+  function sortThaiByName(list) {
+    return list.sort((a, b) =>
+      a.name.localeCompare(b.name, "th", { sensitivity: "base" })
+    );
+  }
+
+  // ... (ฟังก์ชัน loadMasterData, renderMasterTables, event listeners เดิมทั้งหมด ใช้ต่อได้เลย) ... 
+  // แปะโค้ด JS เดิมของ manage.html ที่เหลือต่อจากนี้ได้เลย
+  
+  async function loadMasterData() {
+    // categories
+    let catSnap = await getDocs(categoriesCol);
+    if (catSnap.empty) {
+      await Promise.all(
+        DEFAULT_CATEGORIES.map(name =>
+          addDoc(categoriesCol, { name, createdAt: serverTimestamp() })
+        )
+      );
+      catSnap = await getDocs(categoriesCol);
+    }
+    categories = [];
+    catSnap.forEach(d => {
+      const data = d.data();
+      if (data && data.name) categories.push({ id: d.id, name: data.name });
+    });
+    sortThaiByName(categories);
+
+    // methods
+    let methodSnap = await getDocs(methodsCol);
+    if (methodSnap.empty) {
+      await Promise.all(
+        DEFAULT_METHODS.map(name =>
+          addDoc(methodsCol, { name, createdAt: serverTimestamp() })
+        )
+      );
+      methodSnap = await getDocs(methodsCol);
+    }
+    methods = [];
+    methodSnap.forEach(d => {
+      const data = d.data();
+      if (data && data.name) methods.push({ id: d.id, name: data.name });
+    });
+    sortThaiByName(methods);
+
+    // รีเซ็ตหน้า
+    const catMaxPage = Math.max(1, Math.ceil((categories.length || 1) / categoryPageSize));
+    if (categoryPage > catMaxPage) categoryPage = catMaxPage;
+
+    const methodMaxPage = Math.max(1, Math.ceil((methods.length || 1) / methodPageSize));
+    if (methodPage > methodMaxPage) methodPage = methodMaxPage;
+
+    renderMasterTables();
+  }
+
+  function renderMasterTables() {
+    const catBody = document.getElementById("categories-table-body");
+    const methBody = document.getElementById("methods-table-body");
+    
+    // Elements ควบคุมหมวดหมู่
+    const catPageInfo = document.getElementById("category-page-info");
+    const catPrevBtn = document.getElementById("category-prev");
+    const catNextBtn = document.getElementById("category-next");
+    const catPageSizeSelect = document.getElementById("category-page-size");
+
+    // Elements ควบคุมวิธีจ่าย
+    const methodPageInfo = document.getElementById("method-page-info");
+    const methodPrevBtn = document.getElementById("method-prev");
+    const methodNextBtn = document.getElementById("method-next");
+    const methodPageSizeSelect = document.getElementById("method-page-size");
+
+    // --- Render หมวดหมู่ ---
+    if (catBody) {
+      catBody.innerHTML = "";
+      const totalCat = categories.length;
+      
+      if (!totalCat) {
+        catBody.innerHTML = '<tr><td colspan="2" class="table-empty-text">ยังไม่มีหมวดหมู่</td></tr>';
+      } else {
+        const start = (categoryPage - 1) * categoryPageSize;
+        const pageItems = categories.slice(start, start + categoryPageSize);
+
+        pageItems.forEach(c => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${c.name}</td>
+            <td style="text-align: right;">
+              <div class="btn-group-inline">
+                <button type="button" class="btn btn-secondary btn-small edit-cat-btn" data-id="${c.id}" data-name="${c.name}">แก้ไข</button>
+                <button type="button" class="btn btn-danger btn-small del-cat-btn" data-id="${c.id}" data-name="${c.name}">ลบ</button>
+              </div>
+            </td>
+          `;
+          catBody.appendChild(tr);
+        });
+        
+        // ผูก event ปุ่มในตาราง (เพื่อความสะอาดของโค้ด)
+        catBody.querySelectorAll(".edit-cat-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = btn.dataset.id;
+                const oldName = btn.dataset.name;
+                const newName = prompt("แก้ไขชื่อหมวดหมู่", oldName);
+                if(newName && newName.trim()) {
+                    await updateDoc(doc(categoriesCol, id), { name: newName.trim() });
+                    await loadMasterData();
+                }
+            });
+        });
+
+        catBody.querySelectorAll(".del-cat-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                if(confirm(`ลบหมวดหมู่ "${btn.dataset.name}" ?`)) {
+                    await deleteDoc(doc(categoriesCol, btn.dataset.id));
+                    await loadMasterData();
+                }
+            });
+        });
+      }
+
+      // Update Controls UI
+      if(catPageInfo) catPageInfo.textContent = `หน้า ${categoryPage} / ${Math.ceil(totalCat/categoryPageSize) || 1}`;
+      if(catPrevBtn) catPrevBtn.disabled = categoryPage <= 1;
+      if(catNextBtn) catNextBtn.disabled = categoryPage >= (Math.ceil(totalCat/categoryPageSize) || 1);
+    }
+
+    // --- Render วิธีจ่าย ---
+    if (methBody) {
+      methBody.innerHTML = "";
+      const totalMethod = methods.length;
+      
+      if (!totalMethod) {
+         methBody.innerHTML = '<tr><td colspan="2" class="table-empty-text">ยังไม่มีวิธีจ่าย</td></tr>';
+      } else {
+        const start = (methodPage - 1) * methodPageSize;
+        const pageItems = methods.slice(start, start + methodPageSize);
+
+        pageItems.forEach(m => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${m.name}</td>
+            <td style="text-align: right;">
+              <div class="btn-group-inline">
+                <button type="button" class="btn btn-secondary btn-small edit-meth-btn" data-id="${m.id}" data-name="${m.name}">แก้ไข</button>
+                <button type="button" class="btn btn-danger btn-small del-meth-btn" data-id="${m.id}" data-name="${m.name}">ลบ</button>
+              </div>
+            </td>
+          `;
+          methBody.appendChild(tr);
+        });
+
+        methBody.querySelectorAll(".edit-meth-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = btn.dataset.id;
+                const oldName = btn.dataset.name;
+                const newName = prompt("แก้ไขชื่อวิธีจ่าย", oldName);
+                if(newName && newName.trim()) {
+                    await updateDoc(doc(methodsCol, id), { name: newName.trim() });
+                    await loadMasterData();
+                }
+            });
+        });
+
+        methBody.querySelectorAll(".del-meth-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                if(confirm(`ลบวิธีจ่าย "${btn.dataset.name}" ?`)) {
+                    await deleteDoc(doc(methodsCol, btn.dataset.id));
+                    await loadMasterData();
+                }
+            });
+        });
+      }
+      
+      if(methodPageInfo) methodPageInfo.textContent = `หน้า ${methodPage} / ${Math.ceil(totalMethod/methodPageSize) || 1}`;
+      if(methodPrevBtn) methodPrevBtn.disabled = methodPage <= 1;
+      if(methodNextBtn) methodNextBtn.disabled = methodPage >= (Math.ceil(totalMethod/methodPageSize) || 1);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadMasterData();
+
+    // ปุ่มเพิ่มหมวดหมู่
+    document.getElementById("add-category").addEventListener("click", async () => {
+      const input = document.getElementById("new-category-name");
+      const name = input.value.trim();
+      if (!name) return alert("กรุณากรอกชื่อหมวดหมู่");
+      await addDoc(categoriesCol, { name, createdAt: serverTimestamp() });
+      input.value = "";
+      loadMasterData();
+    });
+
+    // ปุ่มเพิ่มวิธีจ่าย
+    document.getElementById("add-method").addEventListener("click", async () => {
+      const input = document.getElementById("new-method-name");
+      const name = input.value.trim();
+      if (!name) return alert("กรุณากรอกชื่อวิธีจ่าย");
+      await addDoc(methodsCol, { name, createdAt: serverTimestamp() });
+      input.value = "";
+      loadMasterData();
+    });
+
+    // ปุ่มเปลี่ยนหน้า
+    document.getElementById("category-prev").onclick = () => { if(categoryPage > 1) { categoryPage--; renderMasterTables(); }};
+    document.getElementById("category-next").onclick = () => { const max = Math.ceil(categories.length/categoryPageSize); if(categoryPage < max) { categoryPage++; renderMasterTables(); }};
+    document.getElementById("method-prev").onclick = () => { if(methodPage > 1) { methodPage--; renderMasterTables(); }};
+    document.getElementById("method-next").onclick = () => { const max = Math.ceil(methods.length/methodPageSize); if(methodPage < max) { methodPage++; renderMasterTables(); }};
+    
+    // เปลี่ยนจำนวนต่อหน้า
+    document.getElementById("category-page-size").onchange = (e) => { categoryPageSize = parseInt(e.target.value); categoryPage = 1; renderMasterTables(); };
+    document.getElementById("method-page-size").onchange = (e) => { methodPageSize = parseInt(e.target.value); methodPage = 1; renderMasterTables(); };
+  });
+</script>
+</body>
+</html>
