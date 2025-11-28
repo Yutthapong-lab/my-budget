@@ -1,4 +1,4 @@
-// --- main.js (Compact Animated Version) ---
+// --- main.js (Web Single Column) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -19,16 +19,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
 });
 
-// Helper: Color Palettes for Categories
+// Helper: Color Palettes
 function getColorForCategory(name) {
     const palettes = [
-        { bg: "#e0e7ff", text: "#4338ca" }, // Indigo
-        { bg: "#dcfce7", text: "#15803d" }, // Green
-        { bg: "#ffedd5", text: "#c2410c" }, // Orange
-        { bg: "#fce7f3", text: "#be185d" }, // Pink
-        { bg: "#fef3c7", text: "#b45309" }, // Amber
-        { bg: "#e0f2fe", text: "#0369a1" }, // Sky
-        { bg: "#f3e8ff", text: "#7e22ce" }  // Purple
+        { bg: "#E0E7FF", text: "#4338CA" }, // Indigo
+        { bg: "#DCFCE7", text: "#15803D" }, // Green
+        { bg: "#FFEDD5", text: "#C2410C" }, // Orange
+        { bg: "#FCE7F3", text: "#BE185D" }, // Pink
+        { bg: "#FEF3C7", text: "#B45309" }, // Amber
+        { bg: "#E0F2FE", text: "#0369A1" }, // Sky
+        { bg: "#F3E8FF", text: "#7E22CE" }  // Purple
     ];
     const index = name.charCodeAt(0) % palettes.length;
     return palettes[index];
@@ -89,16 +89,15 @@ window.editRecord = function(id) {
 
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<span class="material-icons-round" style="font-size:18px;">edit</span> บันทึกแก้ไข';
+    submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกแก้ไข';
     submitBtn.classList.add("btn-edit-mode");
     
-    // Scroll to top inside app-layout
-    document.querySelector('.app-layout').scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function resetSubmitButton() {
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<span class="material-icons-round" style="font-size:18px;">check</span> บันทึก';
+    submitBtn.innerHTML = '<span class="material-icons-round">save</span> บันทึกข้อมูล';
     submitBtn.classList.remove("btn-edit-mode");
 }
 
@@ -157,12 +156,12 @@ function applyFilters() {
     currentPage = 1; renderList(); updateSummary();
 }
 
-// --- Render List Items ---
+// --- Render Table ---
 function renderList() {
     const container = document.getElementById("table-body");
     if(!container) return; container.innerHTML = "";
 
-    const pageSize = 10;
+    const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
@@ -170,14 +169,14 @@ function renderList() {
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     if(displayItems.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:#cbd5e1; margin-top:20px;">ไม่มีรายการ...</div>`;
+        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#ccc;">ไม่มีรายการ...</td></tr>`;
         return;
     }
 
     displayItems.forEach(r => {
         let timeStr = "";
         if (r.createdAt && r.createdAt.seconds) {
-            timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
         }
 
         let catHtml = "";
@@ -185,41 +184,37 @@ function renderList() {
         catHtml = cats.map(c => {
             if(!c) return "";
             const color = getColorForCategory(c);
-            return `<span class="t-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
+            return `<span class="cat-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
         }).join("");
 
-        const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "";
-        const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "";
+        const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "-";
+        const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "-";
 
-        const card = document.createElement("div");
-        card.className = "t-card";
-        card.innerHTML = `
-            <div class="t-left">
-                <div class="t-date">
-                   <span class="material-icons-round" style="font-size:12px;">event</span> ${r.date} ${timeStr}
-                </div>
-                <div class="t-title">${r.item}</div>
-                <div class="t-badges">${catHtml}</div>
-                <div style="font-size:10px; color:#94a3b8; margin-top:2px;">${r.method} ${r.note ? '• '+r.note : ''}</div>
-            </div>
-            <div class="t-right">
-                <div class="val-plus">${incVal}</div>
-                <div class="val-minus">${expVal}</div>
-                <div class="action-row">
-                   <button class="btn-act ba-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">edit</span></button>
-                   <button class="btn-act ba-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">delete</span></button>
-                </div>
-            </div>
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>
+                <div style="font-weight:600;">${r.date}</div>
+                <div class="time-txt"><span class="material-icons-round" style="font-size:12px;">schedule</span> ${timeStr}</div>
+            </td>
+            <td>${r.item} <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${r.note || ''}</div></td>
+            <td>${catHtml}</td>
+            <td style="text-align:right; color:#16a34a; font-weight:600;">${incVal}</td>
+            <td style="text-align:right; color:#dc2626; font-weight:600;">${expVal}</td>
+            <td><span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:4px; font-size:12px;">${r.method}</span></td>
+            <td style="text-align:center;">
+               <button class="act-btn ab-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">edit</span></button>
+               <button class="act-btn ab-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:16px;">delete</span></button>
+            </td>
         `;
-        container.appendChild(card);
+        container.appendChild(tr);
     });
 
     const controls = document.getElementById("pagination-controls");
     if(controls) {
         controls.innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:#fff; width:30px; height:30px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b; font-size:16px;">chevron_left</span></button>
-        <span style="align-self:center; font-size:12px; color:#94a3b8;">${currentPage}/${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:#fff; width:30px; height:30px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer;"><span class="material-icons-round" style="color:#64748b; font-size:16px;">chevron_right</span></button>`;
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;"><span class="material-icons-round" style="font-size:16px; color:#64748b;">chevron_left</span></button>
+        <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;"><span class="material-icons-round" style="font-size:16px; color:#64748b;">chevron_right</span></button>`;
     }
 }
 
@@ -297,4 +292,5 @@ function setupEventListeners() {
         if(filterText) filterText.value = "";
         applyFilters();
     });
+    document.getElementById("page-size")?.addEventListener("change", () => { currentPage = 1; renderList(); });
 }
