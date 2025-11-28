@@ -2,9 +2,8 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>My Budget - Animated</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>My Budget - Web Single</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,27 +13,27 @@
   <style>
     :root {
       --primary: #6366f1;
-      --text-main: #334155;
-      --text-muted: #94a3b8;
-      --radius-app: 24px;
-      --radius-input: 12px;
+      --primary-hover: #4f46e5;
+      --text-main: #1e293b;
+      --text-sub: #64748b;
+      --glass-bg: rgba(255, 255, 255, 0.9);
+      --glass-border: 1px solid rgba(255, 255, 255, 0.6);
+      --shadow-xl: 0 20px 50px -12px rgba(0, 0, 0, 0.25);
+      --radius: 20px;
     }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+    * { box-sizing: border-box; outline: none; }
 
     body {
       margin: 0; padding: 0;
       font-family: "Kanit", sans-serif;
       color: var(--text-main);
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center; /* จัดกึ่งกลางจอคอม */
-      
-      /* --- Animated Background --- */
-      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      /* Animated Gradient Background */
+      background: linear-gradient(-45deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb);
       background-size: 400% 400%;
       animation: gradientBG 15s ease infinite;
+      display: flex; justify-content: center; padding: 40px 20px;
     }
 
     @keyframes gradientBG {
@@ -43,263 +42,310 @@
       100% { background-position: 0% 50%; }
     }
 
-    /* --- App Container (Glassmorphism) --- */
-    .app-layout {
+    /* --- Main Container (Glass) --- */
+    .glass-container {
       width: 100%;
-      max-width: 480px; /* ขนาดมือถือสวยๆ */
-      height: 100vh;      /* เต็มความสูง */
-      max-height: 100vh;  /* ห้ามเกินหน้าจอ */
-      background: rgba(255, 255, 255, 0.92); /* สีขาวโปร่งแสง */
-      backdrop-filter: blur(10px); /* เบลอฉากหลัง */
-      box-shadow: 0 20px 50px rgba(0,0,0,0.2);
-      display: flex; flex-direction: column;
-      overflow-y: auto; /* ให้ scroll ได้เฉพาะในกล่องนี้ */
-      position: relative;
+      max-width: 1100px; /* จำกัดความกว้างไม่ให้ยืดเกิน */
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-xl);
+      border: var(--glass-border);
+      padding: 40px;
+      display: flex; flex-direction: column; gap: 30px;
     }
 
-    /* บน PC ให้กล่องดูลอยๆ มีขอบมน */
-    @media (min-width: 500px) {
-      .app-layout {
-        height: 90vh; /* ไม่เต็มจอคอม */
-        border-radius: var(--radius-app);
-        max-height: 850px;
-      }
-      /* ซ่อน Scrollbar สวยๆ */
-      .app-layout::-webkit-scrollbar { width: 6px; }
-      .app-layout::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    }
-
-    /* --- Header --- */
-    .app-header {
-      padding: 20px 20px 10px;
-      background: rgba(255,255,255,0.8);
-      position: sticky; top: 0; z-index: 50;
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(0,0,0,0.05);
+    /* --- Header & Stats --- */
+    .header-section {
+      display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;
     }
     
-    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .app-brand { font-size: 20px; font-weight: 800; background: -webkit-linear-gradient(45deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 6px; }
-    
-    .weather-pill { font-size: 12px; background: #fff; padding: 4px 10px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: #64748b; font-weight: 500; display:flex; gap:4px; align-items:center; }
+    .brand-area { display: flex; flex-direction: column; gap: 4px; }
+    .brand-title { font-size: 28px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px; }
+    .brand-subtitle { font-size: 14px; color: var(--text-sub); }
 
-    /* Stats Cards */
-    .stats-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
-    .stats-row::-webkit-scrollbar { display: none; }
-    
-    .stat-card {
-      flex: 1; min-width: 100px;
-      background: #fff; border-radius: 16px; padding: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center;
-      border: 1px solid #f1f5f9; position: relative; overflow: hidden;
+    .weather-badge {
+      background: #fff; padding: 8px 16px; border-radius: 50px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05); color: #f59e0b; font-weight: 600; font-size: 14px;
+      display: flex; align-items: center; gap: 6px;
     }
-    .stat-card::after { content:''; position: absolute; width:40px; height:40px; border-radius:50%; opacity:0.1; top:-10px; right:-10px; }
-    
-    .sc-inc::after { background: #22c55e; }
-    .sc-exp::after { background: #ef4444; }
-    .sc-net::after { background: #3b82f6; }
 
-    .st-lbl { font-size: 11px; color: var(--text-muted); }
-    .st-val { font-size: 16px; font-weight: 700; margin-top: 2px; }
-
-    /* --- Body Content --- */
-    .app-body { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
-
-    /* --- Form Compact Style --- */
-    .form-box {
-      background: #fff; padding: 16px; border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    /* Stats Grid */
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 600px;
     }
-    .box-title { font-size: 14px; font-weight: 700; color: #475569; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .setting-link { font-size: 12px; color: #6366f1; text-decoration: none; background: #eef2ff; padding: 2px 8px; border-radius: 6px; }
-
-    /* Grid Layout for Compact Form */
-    .form-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-bottom: 10px; }
-    .form-full { grid-column: span 2; }
-    
-    .inp-std {
-      width: 100%; padding: 10px 12px; font-size: 13px; border-radius: var(--radius-input);
-      border: 1px solid #e2e8f0; background: #f8fafc; font-family: inherit; transition: 0.2s;
+    .stat-box {
+      background: #fff; padding: 16px 20px; border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);
+      display: flex; flex-direction: column; position: relative; overflow: hidden;
     }
-    .inp-std:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1); }
-    
-    .inp-inc { background: #f0fdf4; color: #15803d; font-weight: 600; border: 1px solid #bbf7d0; }
-    .inp-exp { background: #fef2f2; color: #b91c1c; font-weight: 600; border: 1px solid #fecaca; }
+    .stat-box::after { content:''; position:absolute; width:60px; height:60px; border-radius:50%; opacity:0.1; top:-10px; right:-10px; }
+    .sb-inc::after { background: #16a34a; }
+    .sb-exp::after { background: #dc2626; }
+    .sb-net::after { background: #2563eb; }
 
-    /* Select Multiple Compact */
-    select[multiple] { height: 70px; padding: 4px; font-size: 12px; }
-    select[multiple] option { padding: 6px; border-radius: 6px; margin-bottom: 2px; }
-    select[multiple] option:checked { background: #eef2ff; color: var(--primary); font-weight: 600; border-left: 3px solid var(--primary); }
+    .stat-label { font-size: 13px; color: var(--text-sub); font-weight: 500; }
+    .stat-val { font-size: 24px; font-weight: 700; margin-top: 4px; }
+    .c-green { color: #16a34a; }
+    .c-red { color: #dc2626; }
+    .c-blue { color: #2563eb; }
+
+    /* --- Form Section (Horizontal Grid) --- */
+    .form-card {
+      background: #fff; padding: 24px; border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    }
+    .form-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+      padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;
+    }
+    .fh-title { font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    .setting-link { font-size: 13px; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px; background: #eef2ff; padding: 4px 12px; border-radius: 8px; transition: 0.2s; }
+    .setting-link:hover { background: #e0e7ff; }
+
+    /* Grid Layout for Desktop Form */
+    .form-layout {
+      display: grid;
+      grid-template-columns: 150px 1fr 1fr; /* วันที่ / รายการ / หมวดหมู่ */
+      gap: 16px;
+      align-items: start;
+    }
+    
+    .input-wrapper { display: flex; flex-direction: column; gap: 6px; }
+    .lbl { font-size: 13px; font-weight: 500; color: var(--text-sub); }
+    
+    .std-input {
+      width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;
+      background: #f8fafc; font-size: 14px; font-family: inherit; transition: 0.2s;
+    }
+    .std-input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+    .std-input:disabled { background: #f1f5f9; cursor: not-allowed; }
+
+    /* Money Row */
+    .money-row {
+      grid-column: span 3; /* เต็มแถว */
+      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px;
+      margin-top: 8px;
+    }
+    
+    .inp-inc { background: #f0fdf4; color: #15803d; font-weight: 600; border-color: #bbf7d0; }
+    .inp-exp { background: #fef2f2; color: #b91c1c; font-weight: 600; border-color: #fecaca; }
 
     /* Buttons */
-    .btn-group { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; margin-top: 10px; }
+    .form-actions {
+      grid-column: span 3; display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; padding-top: 16px; border-top: 1px solid #f1f5f9;
+    }
+    .btn-main {
+      padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+      display: flex; align-items: center; gap: 8px; transition: 0.2s;
+    }
+    .btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4); }
+    .btn-edit-mode { background: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
     
-    .btn-save {
-      background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none;
-      padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); transition: 0.2s;
+    .btn-sec {
+      padding: 12px 20px; background: #fff; border: 1px solid #e2e8f0; color: var(--text-sub);
+      border-radius: 12px; font-weight: 500; cursor: pointer; transition: 0.2s;
     }
-    .btn-save:active { transform: scale(0.98); }
-    .btn-edit-mode { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+    .btn-sec:hover { background: #f8fafc; color: var(--text-main); }
 
-    .btn-clear {
-      background: #f1f5f9; color: #64748b; border: none; border-radius: 12px; cursor: pointer; font-weight: 500; font-size: 13px;
+    /* --- Table Section --- */
+    .table-card {
+      background: #fff; padding: 0; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.04); overflow: hidden;
     }
-
-    /* --- List Section --- */
-    .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
-    .search-box {
-      flex: 1; position: relative;
+    .table-toolbar {
+      padding: 20px; display: flex; justify-content: space-between; align-items: center;
+      background: #fcfcfc; border-bottom: 1px solid #f1f5f9;
     }
-    .search-box input {
-      padding-left: 32px; border-radius: 50px; border: none; background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    }
-    .search-icon { position: absolute; left: 10px; top: 10px; font-size: 16px; color: #cbd5e1; }
+    .tbl-title { font-size: 18px; font-weight: 700; color: var(--text-main); }
     
-    .month-picker { width: auto; border-radius: 50px; border: none; background: #fff; font-size: 12px; padding: 0 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .filters { display: flex; gap: 10px; }
+    .search-box { position: relative; }
+    .search-box input { padding-left: 34px; width: 220px; border-radius: 50px; border: 1px solid #e2e8f0; height: 40px; }
+    .search-icon { position: absolute; left: 10px; top: 10px; color: #94a3b8; font-size: 20px; }
+    .month-input { border-radius: 10px; border: 1px solid #e2e8f0; padding: 0 10px; cursor: pointer; }
 
-    .trans-list { display: flex; flex-direction: column; gap: 10px; }
-    
-    .t-card {
-      background: #fff; padding: 12px 16px; border-radius: 16px;
-      display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.02); transition: 0.2s;
+    /* Table */
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    thead { background: #fff; }
+    th { text-align: left; padding: 16px 24px; color: var(--text-sub); font-size: 13px; font-weight: 600; border-bottom: 2px solid #f1f5f9; }
+    td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; color: var(--text-main); }
+    tr:hover { background: #f8fafc; }
+
+    .cat-pill { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: 500; margin-right: 4px; margin-bottom: 4px; }
+    .time-txt { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+
+    /* Action Buttons in Table */
+    .act-btn {
+      width: 32px; height: 32px; border-radius: 8px; border: none; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; margin-right: 6px;
     }
-    .t-card:hover { transform: translateX(2px); }
-    
-    .t-left { display: flex; flex-direction: column; gap: 2px; }
-    .t-date { font-size: 10px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
-    .t-title { font-size: 14px; font-weight: 600; color: #1e293b; }
-    .t-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
-    .t-pill { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+    .ab-edit { background: #fff7ed; color: #f97316; }
+    .ab-edit:hover { background: #ffedd5; }
+    .ab-del { background: #fef2f2; color: #ef4444; }
+    .ab-del:hover { background: #fee2e2; }
 
-    .t-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-    .val-plus { color: #15803d; font-weight: 700; font-size: 14px; }
-    .val-minus { color: #b91c1c; font-weight: 700; font-size: 14px; }
-    
-    .action-row { display: flex; gap: 6px; margin-top: 2px; }
-    .btn-act {
-      width: 24px; height: 24px; border-radius: 6px; border: none; 
-      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    .footer { text-align: center; color: #fff; opacity: 0.8; font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+    /* Responsive for small screens */
+    @media (max-width: 900px) {
+      .header-section { flex-direction: column; align-items: stretch; }
+      .stats-bar { max-width: 100%; }
+      .form-layout { grid-template-columns: 1fr 1fr; }
+      .money-row { grid-template-columns: 1fr 1fr; grid-column: span 2; }
+      .form-actions { grid-column: span 2; }
     }
-    .ba-edit { background: #fff7ed; color: #f97316; }
-    .ba-del { background: #fef2f2; color: #ef4444; }
-
-    /* Footer */
-    .footer { text-align: center; font-size: 10px; color: #cbd5e1; margin-top: 20px; }
-
-    /* Hidden elements */
-    .hidden { display: none; }
-
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      .glass-container { padding: 20px; }
+      .form-layout { grid-template-columns: 1fr; }
+      .money-row { grid-template-columns: 1fr; grid-column: span 1; }
+      .form-actions { grid-column: span 1; }
+      .filters { flex-wrap: wrap; }
+      .search-box input { width: 100%; }
+    }
   </style>
 </head>
 <body>
 
-<div class="app-layout">
-  
-  <header class="app-header">
-    <div class="header-top">
-      <div class="app-brand">
-        <span class="material-icons-round">donut_small</span> My Budget
-      </div>
-      <div class="weather-pill">
-        <span>🌤️</span> 32°
-      </div>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat-card sc-inc">
-        <div class="st-lbl">รายรับ</div>
-        <div class="st-val" style="color:#16a34a" id="sum-income">0.00</div>
-      </div>
-      <div class="stat-card sc-exp">
-        <div class="st-lbl">รายจ่าย</div>
-        <div class="st-val" style="color:#dc2626" id="sum-expense">0.00</div>
-      </div>
-      <div class="stat-card sc-net">
-        <div class="st-lbl">คงเหลือ</div>
-        <div class="st-val" style="color:#2563eb" id="sum-net">0.00</div>
-      </div>
-    </div>
-  </header>
-
-  <div class="app-body">
+  <div class="glass-container">
     
-    <section class="form-box">
-      <div class="box-title">
-        <span>บันทึกรายการ</span>
-        <a href="manage.html" class="setting-link">จัดการหมวดหมู่</a>
+    <header class="header-section">
+      <div class="brand-area">
+        <div class="brand-title">
+          <span class="material-icons-round" style="font-size:32px;">account_balance_wallet</span>
+          My Budget
+        </div>
+        <div class="brand-subtitle">จัดการการเงินง่ายๆ บน Cloud</div>
       </div>
 
-      <form id="entry-form">
-        <div class="form-grid">
-          <input type="date" id="date" class="inp-std" required>
-          <input type="text" id="item" class="inp-std" placeholder="ชื่อรายการ..." required>
+      <div class="stats-bar">
+        <div class="stat-box sb-inc">
+          <span class="stat-label">รายรับ</span>
+          <span class="stat-val c-green" id="sum-income">0.00</span>
+        </div>
+        <div class="stat-box sb-exp">
+          <span class="stat-label">รายจ่าย</span>
+          <span class="stat-val c-red" id="sum-expense">0.00</span>
+        </div>
+        <div class="stat-box sb-net">
+          <span class="stat-label">คงเหลือ</span>
+          <span class="stat-val c-blue" id="sum-net">0.00</span>
+        </div>
+      </div>
+
+      <div class="weather-badge">
+        <span class="material-icons-round" style="color:#f59e0b;">wb_sunny</span> 32°C
+      </div>
+    </header>
+
+    <section class="form-card">
+      <div class="form-header">
+        <div class="fh-title">
+          <span class="material-icons-round" style="color:var(--primary);">edit_note</span> บันทึกรายการ
+        </div>
+        <a href="manage.html" class="setting-link">
+          <span class="material-icons-round" style="font-size:16px;">settings</span> จัดการหมวดหมู่
+        </a>
+      </div>
+
+      <form id="entry-form" class="form-layout">
+        <div class="input-wrapper">
+          <label class="lbl">วันที่</label>
+          <input type="date" id="date" class="std-input" required>
+        </div>
+        
+        <div class="input-wrapper">
+          <label class="lbl">รายการ</label>
+          <input type="text" id="item" class="std-input" placeholder="ระบุชื่อรายการ..." required>
         </div>
 
-        <div style="margin-bottom:10px;">
-          <select id="category" class="inp-std" multiple required>
+        <div class="input-wrapper">
+          <label class="lbl">หมวดหมู่ <span style="font-size:10px; font-weight:400; color:#94a3b8;">(กด Ctrl เลือกหลายข้อ)</span></label>
+          <select id="category" class="std-input" multiple required style="height:46px; padding:2px;">
             <option value="">กำลังโหลด...</option>
           </select>
-          <div style="font-size:10px; text-align:right; color:#94a3b8; margin-top:2px;">* เลือกได้หลายข้อ</div>
         </div>
 
-        <div class="form-grid">
-          <input type="number" id="income" class="inp-std inp-inc" placeholder="รายรับ (+)" min="0" step="0.01">
-          <input type="number" id="expense" class="inp-std inp-exp" placeholder="รายจ่าย (-)" min="0" step="0.01">
+        <div class="money-row">
+           <div class="input-wrapper">
+             <label class="lbl" style="color:#16a34a">รายรับ (+)</label>
+             <input type="number" id="income" class="std-input inp-inc" placeholder="0.00" min="0" step="0.01">
+           </div>
+           <div class="input-wrapper">
+             <label class="lbl" style="color:#dc2626">รายจ่าย (-)</label>
+             <input type="number" id="expense" class="std-input inp-exp" placeholder="0.00" min="0" step="0.01">
+           </div>
+           <div class="input-wrapper">
+             <label class="lbl">วิธีชำระ</label>
+             <select id="method" class="std-input" required>
+               <option value="">เลือก...</option>
+             </select>
+           </div>
+           <div class="input-wrapper">
+             <label class="lbl">หมายเหตุ</label>
+             <input type="text" id="note" class="std-input" placeholder="...">
+           </div>
         </div>
 
-        <div class="form-grid">
-          <select id="method" class="inp-std" required>
-            <option value="">วิธีจ่าย...</option>
-          </select>
-          <input type="text" id="note" class="inp-std" placeholder="หมายเหตุ">
-        </div>
-
-        <div class="btn-group">
-          <button type="submit" class="btn-save">
-            <span class="material-icons-round" style="font-size:18px;">check</span> บันทึก
-          </button>
-          <button type="reset" class="btn-clear">ล้าง</button>
+        <div class="form-actions">
+           <button type="reset" class="btn-sec">ล้างค่า</button>
+           <button type="submit" class="btn-main">
+             <span class="material-icons-round">save</span> บันทึกข้อมูล
+           </button>
         </div>
       </form>
     </section>
 
-    <section>
-      <div class="box-title" style="margin-bottom:8px; padding:0 4px;">รายการล่าสุด</div>
-      
-      <div class="filter-bar">
-        <div class="search-box">
-          <span class="material-icons-round search-icon">search</span>
-          <input type="text" id="filter-text" class="inp-std" placeholder="ค้นหา...">
+    <section class="table-card">
+      <div class="table-toolbar">
+        <div class="tbl-title">ประวัติรายการ</div>
+        <div class="filters">
+           <div style="display:none;">
+             <select id="filter-category"></select>
+             <select id="filter-method"></select>
+           </div>
+
+           <div class="search-box">
+             <span class="material-icons-round search-icon">search</span>
+             <input type="text" id="filter-text" placeholder="ค้นหา...">
+           </div>
+           <input type="month" id="filter-month" class="month-input">
+           <button id="clear-filter" class="act-btn ab-edit" style="width:40px; height:40px; background:#f1f5f9; color:#64748b;">
+             <span class="material-icons-round">refresh</span>
+           </button>
         </div>
-        <input type="month" id="filter-month" class="month-picker">
-        <button id="clear-filter" style="width:36px; border:none; background:#fff; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.05); color:#94a3b8; cursor:pointer;">
-           <span class="material-icons-round" style="font-size:18px;">refresh</span>
-        </button>
       </div>
 
-      <div class="hidden">
-        <select id="filter-category"></select>
-        <select id="filter-method"></select>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th width="15%">วันที่ / เวลา</th>
+              <th width="20%">รายการ</th>
+              <th width="20%">หมวดหมู่</th>
+              <th width="10%" style="text-align:right">รายรับ</th>
+              <th width="10%" style="text-align:right">รายจ่าย</th>
+              <th width="10%">วิธี</th>
+              <th width="15%" style="text-align:center">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            </tbody>
+        </table>
       </div>
 
-      <div id="table-body" class="trans-list">
-        </div>
-
-      <div id="pagination-controls" style="display:flex; justify-content:center; gap:10px; margin-top:20px;"></div>
-      <select id="page-size" class="hidden"><option value="10" selected>10</option></select>
-
+      <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9;">
+         <div style="font-size:13px; color:#64748b;">
+           แสดง <select id="page-size" style="border:1px solid #e2e8f0; border-radius:4px;"><option value="10">10</option><option value="20">20</option></select> รายการ
+         </div>
+         <div id="pagination-controls" style="display:flex; gap:8px;"></div>
+      </div>
     </section>
 
-    <div class="footer">
-      © 2024 Yutthapong R. (Cloud Edition)
-    </div>
+    <div class="footer">Copyright © 2024 Yutthapong R. All rights reserved.</div>
   </div>
-</div>
 
-<script type="module" src="main.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
