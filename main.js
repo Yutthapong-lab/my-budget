@@ -1,24 +1,14 @@
-// --- main.js ---
+// --- main.js (Version: Colorful Categories & Modern Buttons) ---
 import { db } from "./firebase-config.js";
 import { 
-    collection, 
-    addDoc, 
-    deleteDoc, 
-    updateDoc, 
-    doc, 
-    query, 
-    orderBy, 
-    onSnapshot, 
-    getDocs,
-    serverTimestamp 
+    collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// --- ตัวแปร Global ---
+// Global Variables
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
 let editingId = null;
-
 const recordsCol = collection(db, "records"); 
 
 // --- เริ่มทำงาน ---
@@ -26,48 +16,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMasterData();
     const dateInput = document.getElementById('date');
     if(dateInput) dateInput.valueAsDate = new Date();
-    
     subscribeToFirestore();
     setupEventListeners();
 });
 
-// --- Firebase Real-time ---
+// --- Helper: สุ่มสีพาสเทลสำหรับหมวดหมู่ ---
+function getColorForCategory(name) {
+    // ชุดสีพาสเทล (Background, Text)
+    const palettes = [
+        { bg: "#dbeafe", text: "#1e40af" }, // Blue
+        { bg: "#dcfce7", text: "#166534" }, // Green
+        { bg: "#fce7f3", text: "#9d174d" }, // Pink
+        { bg: "#ffedd5", text: "#9a3412" }, // Orange
+        { bg: "#f3e8ff", text: "#6b21a8" }, // Purple
+        { bg: "#e0f2fe", text: "#075985" }, // Sky
+        { bg: "#fee2e2", text: "#991b1b" }  // Red
+    ];
+    // ใช้ตัวอักษรตัวแรกแปลงเป็นตัวเลขเพื่อเลือกสี (เพื่อให้หมวดเดิมได้สีเดิมเสมอ)
+    const index = name.charCodeAt(0) % palettes.length;
+    return palettes[index];
+}
+
+// --- Firebase Functions ---
 function subscribeToFirestore() {
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
-    
     onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         applyFilters(); 
-    }, (error) => {
-        console.error("Error watching records:", error);
-    });
+    }, (error) => { console.error(error); });
 }
 
-// --- ฟังก์ชันบันทึก ---
 async function saveRecord(rec) {
     try {
         if (editingId) {
             await updateDoc(doc(db, "records", editingId), rec);
             alert("✅ แก้ไขข้อมูลเรียบร้อย");
-            
             // Reset UI
             editingId = null;
             const submitBtn = document.querySelector("#entry-form button[type='submit']");
-            submitBtn.textContent = "💾 บันทึกรายการ";
-            submitBtn.classList.remove("btn-warning");
-            submitBtn.classList.add("btn-primary");
-            submitBtn.style.background = ""; // Reset gradient
+            submitBtn.innerHTML = '<span class="material-icons-round">save</span> บันทึกรายการ';
+            submitBtn.classList.remove("btn-edit-mode");
         } else {
             rec.createdAt = serverTimestamp();
             await addDoc(recordsCol, rec);
             alert("✅ บันทึกข้อมูลเรียบร้อย");
         }
-    } catch (err) {
-        alert("❌ ดำเนินการไม่สำเร็จ: " + err.message);
-    }
+    } catch (err) { alert("❌ Error: " + err.message); }
 }
 
-// --- ฟังก์ชันเตรียมข้อมูลเพื่อแก้ไข ---
+window.deleteRecord = async function(id) {
+    if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
+    try { await deleteDoc(doc(db, "records", id)); } catch (err) { alert("Error"); }
+}
+
 window.editRecord = function(id) {
     const rec = allRecords.find(r => r.id === id);
     if (!rec) return;
@@ -75,46 +76,33 @@ window.editRecord = function(id) {
     document.getElementById("date").value = rec.date;
     document.getElementById("item").value = rec.item;
     
-    // จัดการ Dropdown หมวดหมู่
+    // Multi-select Category
     const catSelect = document.getElementById("category");
-    Array.from(catSelect.options).forEach(option => option.selected = false);
+    Array.from(catSelect.options).forEach(o => o.selected = false);
     if (Array.isArray(rec.category)) {
         rec.category.forEach(val => {
             const option = Array.from(catSelect.options).find(o => o.value === val);
             if (option) option.selected = true;
         });
-    } else {
-        catSelect.value = rec.category;
-    }
+    } else { catSelect.value = rec.category; }
 
     document.getElementById("method").value = rec.method;
     
-    // --- ตั้งค่าช่องเงิน (Income/Expense) ---
-    const incomeInput = document.getElementById("income");
-    const expenseInput = document.getElementById("expense");
-
-    incomeInput.value = rec.income || "";
-    expenseInput.value = rec.expense || "";
-
-    // เรียกใช้ฟังก์ชันตรวจสอบเพื่อล็อคช่องทันทีตอนกดแก้ไข
-    toggleInputState(incomeInput, expenseInput);
-
+    // Toggle Inputs
+    const incInp = document.getElementById("income");
+    const expInp = document.getElementById("expense");
+    incInp.value = rec.income || "";
+    expInp.value = rec.expense || "";
+    toggleInputState(incInp, expInp);
+    
     document.getElementById("note").value = rec.note || "";
 
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.textContent = "💾 บันทึกการแก้ไข";
-    submitBtn.classList.remove("btn-primary");
-    submitBtn.classList.add("btn-warning");
-    submitBtn.style.background = "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)";
-
-    document.querySelector(".card-form").scrollIntoView({ behavior: "smooth" });
-}
-
-window.deleteRecord = async function(id) {
-    if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
-    try { await deleteDoc(doc(db, "records", id)); } 
-    catch (err) { alert("❌ ลบไม่สำเร็จ"); }
+    submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกการแก้ไข';
+    submitBtn.classList.add("btn-edit-mode");
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 async function loadMasterData() {
@@ -125,12 +113,12 @@ async function loadMasterData() {
 
     const fillOptions = (elements, items) => {
         elements.forEach(el => {
-            if (!el) return;
+            if(!el) return;
             const currentVal = el.value;
             el.innerHTML = '<option value="">-- เลือก --</option>';
-            if (el.id === "category") el.innerHTML = ""; 
+            if(el.id === "category") el.innerHTML = ""; 
             items.forEach(item => { el.innerHTML += `<option value="${item}">${item}</option>`; });
-            if (el.id !== "category") el.value = currentVal;
+            if(el.id !== "category") el.value = currentVal;
         });
     };
 
@@ -141,37 +129,24 @@ async function loadMasterData() {
         const methSnap = await getDocs(collection(db, "methods"));
         let methods = []; methSnap.forEach(d => methods.push(d.data().name)); methods.sort();
 
-        if (categories.length === 0) categories = ["อาหาร", "เดินทาง", "ช้อปปิ้ง", "เงินเดือน", "อื่นๆ"];
-        if (methods.length === 0) methods = ["เงินสด", "โอนเงิน", "บัตรเครดิต"];
+        if(categories.length===0) categories=["อาหาร","เดินทาง","ช้อปปิ้ง","อื่นๆ"];
+        if(methods.length===0) methods=["เงินสด","โอนเงิน"];
 
         fillOptions([catSelect, filterCat], categories);
         fillOptions([methodSelect, filterMethod], methods);
-    } catch (error) { console.error("Error master data:", error); }
+    } catch(e) { console.error(e); }
 }
 
 window.changePage = function(delta) { currentPage += delta; renderTable(); }
 
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
-    const fCat = document.getElementById("filter-category")?.value;
-    const fMethod = document.getElementById("filter-method")?.value;
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
-        
-        let matchCat = true;
-        if (fCat) {
-            if (Array.isArray(r.category)) {
-                matchCat = r.category.includes(fCat);
-            } else {
-                matchCat = r.category === fCat;
-            }
-        }
-
-        const matchMethod = fMethod ? r.method === fMethod : true;
         const catText = Array.isArray(r.category) ? r.category.join(" ") : (r.category || "");
-
+        
         const matchText = fText ? (
             (r.item || "").toLowerCase().includes(fText) ||       
             (r.note || "").toLowerCase().includes(fText) ||       
@@ -180,29 +155,22 @@ function applyFilters() {
             (r.income || 0).toString().includes(fText) ||         
             (r.expense || 0).toString().includes(fText)           
         ) : true;
-
-        return matchMonth && matchCat && matchMethod && matchText;
+        return matchMonth && matchText;
     });
-
-    currentPage = 1;
-    renderTable();
-    updateSummary();
+    currentPage = 1; renderTable(); updateSummary();
 }
 
+// --- Render Table (with Colors & Icons) ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
-    if(!tbody) return;
-    tbody.innerHTML = "";
+    if(!tbody) return; tbody.innerHTML = "";
 
     const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
-
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
 
-    const start = (currentPage - 1) * pageSize;
-    const end = start + pageSize;
-    const displayItems = filteredRecords.slice(start, end);
+    const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     displayItems.forEach(r => {
         const tr = document.createElement("tr");
@@ -211,33 +179,38 @@ function renderTable() {
 
         let timeStr = "";
         if (r.createdAt && r.createdAt.seconds) {
-            const dateObj = new Date(r.createdAt.seconds * 1000);
-            timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
+            timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
         }
 
+        // Generate Colorful Category Pills
         let catHtml = "";
-        if (Array.isArray(r.category)) {
-            catHtml = r.category.map(c => 
-                `<span class="pill">${c}</span>`
-            ).join("");
-        } else {
-            catHtml = `<span class="pill">${r.category}</span>`;
-        }
+        const cats = Array.isArray(r.category) ? r.category : [r.category];
+        catHtml = cats.map(c => {
+            if(!c) return "";
+            const color = getColorForCategory(c);
+            return `<span class="cat-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
+        }).join("");
 
         tr.innerHTML = `
             <td>
-                ${r.date} 
-                <div style="font-size:11px; color:#6b7280; margin-top:2px;">🕒 ${timeStr}</div>
+                <div style="font-weight:500;">${r.date}</div>
+                <div style="font-size:11px; color:#94a3b8; display:flex; align-items:center; gap:2px;">
+                    <span class="material-icons-round" style="font-size:12px;">schedule</span> ${timeStr}
+                </div>
             </td>
             <td>${r.item}</td>
             <td>${catHtml}</td>
-            <td class="text-right" style="color:${r.income > 0 ? '#16a34a' : 'inherit'}">${incomeTxt}</td>
-            <td class="text-right" style="color:${r.expense > 0 ? '#dc2626' : 'inherit'}">${expenseTxt}</td>
-            <td>${r.method}</td>
-            <td style="font-size:12px; color:#64748b;">${r.note || ""}</td>
-            <td>
-               <button class="btn-edit" onclick="window.editRecord('${r.id}')">✏️ แก้ไข</button>
-               <button class="btn-delete" onclick="window.deleteRecord('${r.id}')">🗑️ ลบ</button>
+            <td class="text-right" style="color:#16a34a; font-weight:500;">${incomeTxt}</td>
+            <td class="text-right" style="color:#dc2626; font-weight:500;">${expenseTxt}</td>
+            <td><span style="background:#f8fafc; padding:2px 8px; border-radius:4px; border:1px solid #e2e8f0; font-size:12px;">${r.method}</span></td>
+            <td>${r.note || "-"}</td>
+            <td style="text-align:center;">
+               <button class="action-btn btn-edit-row" onclick="window.editRecord('${r.id}')" title="แก้ไข">
+                 <span class="material-icons-round" style="font-size:18px;">edit</span>
+               </button>
+               <button class="action-btn btn-del-row" onclick="window.deleteRecord('${r.id}')" title="ลบ">
+                 <span class="material-icons-round" style="font-size:18px;">delete</span>
+               </button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -245,153 +218,90 @@ function renderTable() {
 
     const controls = document.getElementById("pagination-controls");
     if(controls) {
-        controls.innerHTML = `<span>รวม ${filteredRecords.length} รายการ | หน้า ${currentPage}/${totalPages} </span>
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''}>◀</button>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''}>▶</button>`;
+        controls.innerHTML = `
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} class="action-btn btn-edit-row"><span class="material-icons-round">chevron_left</span></button>
+        <span style="font-size:13px; align-self:center;">หน้า ${currentPage} / ${totalPages}</span>
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} class="action-btn btn-edit-row"><span class="material-icons-round">chevron_right</span></button>`;
     }
 }
 
 function updateSummary() {
     const totalInc = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.income)||0), 0);
     const totalExp = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.expense)||0), 0);
-    
-    const sumIncEl = document.getElementById("sum-income");
-    const sumExpEl = document.getElementById("sum-expense");
-    const sumNetEl = document.getElementById("sum-net");
+    const net = totalInc - totalExp;
 
-    if(sumIncEl) sumIncEl.innerText = `+${formatNumber(totalInc)}`;
-    if(sumExpEl) sumExpEl.innerText = `-${formatNumber(totalExp)}`;
-    if(sumNetEl) {
-        const net = totalInc - totalExp;
-        sumNetEl.innerText = `${formatNumber(net)}`;
-        sumNetEl.style.color = net >= 0 ? "#059669" : "#dc2626";
-    }
+    document.getElementById("sum-income").innerText = formatNumber(totalInc);
+    document.getElementById("sum-expense").innerText = formatNumber(totalExp);
+    const netEl = document.getElementById("sum-net");
+    netEl.innerText = formatNumber(net);
+    netEl.style.color = net >= 0 ? "#6366f1" : "#dc2626";
 }
 
 function formatNumber(num) {
     return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// --- ฟังก์ชันเสริม: สลับสถานะ Input (ล็อค/ปลดล็อค) ---
-function toggleInputState(activeInput, passiveInput) {
-    if (activeInput.value && parseFloat(activeInput.value) > 0) {
-        // ถ้าช่องหลักมีค่า -> ปิดช่องรอง และเคลียร์ค่า
-        passiveInput.value = "";
-        passiveInput.disabled = true;
-        passiveInput.style.backgroundColor = "#e2e8f0"; // สีเทา
-        passiveInput.style.cursor = "not-allowed";
-        passiveInput.placeholder = "🚫 ล็อค";
+function toggleInputState(active, passive) {
+    if (active.value && parseFloat(active.value) > 0) {
+        passive.value = ""; passive.disabled = true;
     } else {
-        // ถ้าช่องหลักว่าง -> เปิดช่องรอง
-        passiveInput.disabled = false;
-        passiveInput.style.backgroundColor = ""; // คืนสีเดิม
-        passiveInput.style.cursor = "text";
-        passiveInput.placeholder = "0.00";
+        passive.disabled = false;
     }
 }
 
-// --- ฟังก์ชันเสริม: ห้ามพิมพ์ตัวอักษรแปลกปลอม ---
-function preventInvalidChars(e) {
-    // ห้ามกด e, +, - (อนุญาตแค่ตัวเลข, จุด, และปุ่มควบคุมเช่น backspace)
-    if (["e", "E", "+", "-"].includes(e.key)) {
-        e.preventDefault();
-    }
-}
+function preventInvalidChars(e) { if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault(); }
 
-// --- Event Listeners ---
 function setupEventListeners() {
     const form = document.getElementById("entry-form");
-    const incomeInput = document.getElementById("income");
-    const expenseInput = document.getElementById("expense");
+    const incInp = document.getElementById("income");
+    const expInp = document.getElementById("expense");
 
     if(form) {
-        // 1. Logic ล็อคช่องรายรับ-รายจ่าย
-        if (incomeInput && expenseInput) {
-            // เมื่อพิมพ์รายรับ
-            incomeInput.addEventListener("input", () => {
-                toggleInputState(incomeInput, expenseInput);
-            });
-            // เมื่อพิมพ์รายจ่าย
-            expenseInput.addEventListener("input", () => {
-                toggleInputState(expenseInput, incomeInput);
-            });
-
-            // ห้ามพิมพ์ตัวอักษร e, +, -
-            incomeInput.addEventListener("keydown", preventInvalidChars);
-            expenseInput.addEventListener("keydown", preventInvalidChars);
-        }
+        incInp.addEventListener("input", () => toggleInputState(incInp, expInp));
+        expInp.addEventListener("input", () => toggleInputState(expInp, incInp));
+        incInp.addEventListener("keydown", preventInvalidChars);
+        expInp.addEventListener("keydown", preventInvalidChars);
 
         form.addEventListener("submit", (e) => {
             e.preventDefault();
-
             const catSelect = document.getElementById("category");
-            const selectedCategories = Array.from(catSelect.selectedOptions).map(option => option.value);
-
-            if (selectedCategories.length === 0) {
-                alert("กรุณาเลือกหมวดหมู่อย่างน้อย 1 รายการ");
-                return;
-            }
+            const selectedCats = Array.from(catSelect.selectedOptions).map(o => o.value);
+            if(selectedCats.length===0) { alert("เลือกหมวดหมู่ก่อนครับ"); return; }
 
             const newRec = {
                 date: document.getElementById("date").value,
                 item: document.getElementById("item").value,
-                category: selectedCategories,
+                category: selectedCats,
                 method: document.getElementById("method").value,
-                income: parseFloat(document.getElementById("income").value) || 0,
-                expense: parseFloat(document.getElementById("expense").value) || 0,
+                income: parseFloat(incInp.value) || 0,
+                expense: parseFloat(expInp.value) || 0,
                 note: document.getElementById("note").value
             };
-            
             saveRecord(newRec);
-
             form.reset();
-            Array.from(catSelect.options).forEach(o => o.selected = false);
+            Array.from(catSelect.options).forEach(o=>o.selected=false);
             document.getElementById("date").valueAsDate = new Date();
         });
 
-        // เมื่อกด Reset ให้ปลดล็อคทุกช่อง
         form.addEventListener("reset", () => {
             editingId = null;
             const submitBtn = document.querySelector("#entry-form button[type='submit']");
-            submitBtn.textContent = "💾 บันทึกรายการ";
-            submitBtn.style.background = ""; 
-            submitBtn.classList.remove("btn-warning");
-            submitBtn.classList.add("btn-primary");
-            
-            // ปลดล็อคช่องเงินทั้งคู่
+            submitBtn.innerHTML = '<span class="material-icons-round">save</span> บันทึกรายการ';
+            submitBtn.classList.remove("btn-edit-mode");
             setTimeout(() => {
-                incomeInput.disabled = false;
-                incomeInput.style.backgroundColor = "";
-                incomeInput.placeholder = "0.00";
-
-                expenseInput.disabled = false;
-                expenseInput.style.backgroundColor = "";
-                expenseInput.placeholder = "0.00";
-
+                incInp.disabled=false; expInp.disabled=false;
                 document.getElementById("date").valueAsDate = new Date();
-                const catSelect = document.getElementById("category");
-                if(catSelect) catSelect.selectedIndex = -1;
-            }, 0);
+            },0);
         });
     }
 
     const filterText = document.getElementById("filter-text");
-    if (filterText) filterText.addEventListener("input", applyFilters);
-
+    if(filterText) filterText.addEventListener("input", applyFilters);
     document.getElementById("filter-month")?.addEventListener("change", applyFilters);
-    document.getElementById("filter-category")?.addEventListener("change", applyFilters);
-    document.getElementById("filter-method")?.addEventListener("change", applyFilters);
-
     document.getElementById("clear-filter")?.addEventListener("click", () => {
         document.getElementById("filter-month").value = "";
-        document.getElementById("filter-category").value = "";
-        document.getElementById("filter-method").value = "";
         if(filterText) filterText.value = "";
         applyFilters();
     });
-
-    document.getElementById("page-size")?.addEventListener("change", () => {
-        currentPage = 1;
-        renderTable();
-    });
+    document.getElementById("page-size")?.addEventListener("change", () => { currentPage = 1; renderTable(); });
 }
