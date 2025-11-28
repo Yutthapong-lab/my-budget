@@ -2,33 +2,17 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>บันทึกรายรับรายจ่าย (Local)</title>
+  <title>บันทึกรายรับรายจ่าย (Cloud)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
   <style>
-    /* CSS เดิมทั้งหมดของคุณ */
-    :root {
-      --card-bg: #ffffff;
-      --card-border: #e5e7eb;
-      --accent: #2563eb;
-      --danger: #ef4444;
-      --text-main: #0f172a;
-      --text-muted: #6b7280;
-      --radius-xl: 22px;
-      --radius-md: 10px;
-      --shadow-soft: 0 18px 40px rgba(148, 163, 184, 0.22);
-    }
+    /* CSS Style เดิม */
+    :root { --card-bg: #ffffff; --card-border: #e5e7eb; --accent: #2563eb; --danger: #ef4444; --text-main: #0f172a; --text-muted: #6b7280; --radius-xl: 22px; --radius-md: 10px; --shadow-soft: 0 18px 40px rgba(148, 163, 184, 0.22); }
     * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 0;
-      font-family: "Kanit", system-ui, -apple-system, sans-serif;
-      font-size: 16px; line-height: 1.6;
-      background: radial-gradient(circle at top, #fce7f3 0, #eff6ff 40%, #ecfeff 70%, #fef9c3 100%);
-      color: var(--text-main); min-height: 100vh;
-    }
+    body { margin: 0; padding: 0; font-family: "Kanit", sans-serif; font-size: 16px; line-height: 1.6; background: radial-gradient(circle at top, #fce7f3 0, #eff6ff 40%, #ecfeff 70%, #fef9c3 100%); color: var(--text-main); min-height: 100vh; }
     .bg-orb { position: fixed; border-radius: 999px; pointer-events: none; filter: blur(40px); opacity: 0.25; mix-blend-mode: soft-light; z-index: 0; }
     .orb1 { width: 420px; height: 420px; top: -120px; left: -60px; background: radial-gradient(circle at 30% 30%, #fb7185, #fb923c); animation: floatOrb1 30s ease-in-out infinite alternate; }
     .orb2 { width: 380px; height: 380px; top: 40%; right: -140px; background: radial-gradient(circle at 30% 30%, #38bdf8, #a855f7); animation: floatOrb2 34s ease-in-out infinite alternate; }
@@ -88,7 +72,6 @@
     #pagination-controls button { border-radius:999px; border:1px solid #d1d5db; background:#ffffff; padding:4px 8px; font-size:12px; cursor:pointer; }
     #pagination-controls button:hover:not(:disabled) { background:#eef2ff; }
     #pagination-controls button:disabled { opacity:0.4; cursor:default; }
-
     @media (max-width:1000px){ .form-grid { grid-template-columns: repeat(3, minmax(0,1fr)); } .field-note { grid-column: span 3; } .field-actions { grid-column: span 3; justify-self:flex-start; } }
     @media (max-width:768px){ .content{padding:0 10px 20px;} .card{padding:14px 12px; border-radius:18px;} table{font-size:13px; min-width:720px;} th,td{padding:6px 8px;} .brand-text-title{font-size:16px;} .form-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
     @media (max-width:540px){ .form-grid { grid-template-columns: 1fr; } .field-note, .field-actions { grid-column: span 1; } .btn-row { justify-content:flex-start; } }
@@ -106,22 +89,16 @@
         <div class="brand-logo">฿</div>
         <div>
           <div class="brand-text-title">My Budget</div>
-          <div class="brand-text-sub">บันทึกรายรับ–รายจ่ายส่วนตัว</div>
+          <div class="brand-text-sub">บันทึกรายรับ–รายจ่าย (Cloud)</div>
         </div>
       </div>
       <div class="topbar-actions">
-    <span class="topbar-link" style="border-style:dashed; color:#059669; background:#ecfdf5; border-color:#6ee7b7;">
-        ☁️ ข้อมูลเก็บบน Cloud (Firebase)
-    </span>
-    <a href="manage.html" class="topbar-link">⚙️ จัดการหมวดหมู่ / วิธีจ่าย</a>
-</div>
-
-<div class="card-header">
-  <div>
-    <div class="card-title">รายการทั้งหมด</div>
-    <div class="card-subtitle">ข้อมูลทั้งหมดดึงมาจาก Database กลาง</div>
-  </div>
-  </div>
+        <span class="topbar-link" style="border-style:dashed; color:#059669; background:#ecfdf5; border-color:#6ee7b7;">
+          ☁️ ข้อมูลเก็บบน Cloud (Firebase)
+        </span>
+        <a href="manage.html" class="topbar-link">⚙️ จัดการหมวดหมู่ / วิธีจ่าย</a>
+      </div>
+    </div>
   </header>
 
   <main class="content">
@@ -192,7 +169,7 @@
         <div class="card-header">
           <div>
             <div class="card-title">รายการทั้งหมด</div>
-            <div class="card-subtitle">ข้อมูลรายการถูกบันทึกในเครื่อง (Local Storage) ส่วนหมวดหมู่ดึงจาก Cloud</div>
+            <div class="card-subtitle">ข้อมูลทั้งหมดดึงมาจาก Database กลาง (Firebase)</div>
           </div>
           <div class="summary-bar">
             <div class="summary-item" id="sum-income">รายรับ: 0.00</div>
@@ -216,7 +193,7 @@
           </div>
           <div class="field" style="flex:1;">
             <label for="filter-text">ค้นหา</label>
-            <input type="text" id="filter-text" placeholder="คำค้นหา...">
+            <input type="text" id="filter-text" placeholder="พิมพ์เพื่อค้นหา...">
           </div>
           <div class="field" style="flex:0 0 auto; align-self:flex-end;">
             <div class="btn-row">
@@ -265,5 +242,4 @@
 <script type="module" src="main.js"></script>
 
 </body>
-
 </html>
