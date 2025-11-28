@@ -1,4 +1,4 @@
-// --- main.js (Final Web Fix) ---
+// --- main.js (Fixed Icons & Layout) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -25,13 +25,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Helper: Color Palettes
 function getColorForCategory(name) {
     const palettes = [
-        { bg: "#e0e7ff", text: "#4338ca" }, // Indigo
-        { bg: "#dcfce7", text: "#15803d" }, // Green
-        { bg: "#ffedd5", text: "#c2410c" }, // Orange
-        { bg: "#fce7f3", text: "#be185d" }, // Pink
-        { bg: "#fef3c7", text: "#b45309" }, // Amber
-        { bg: "#e0f2fe", text: "#0369a1" }, // Sky
-        { bg: "#f3e8ff", text: "#7e22ce" }  // Purple
+        { bg: "#E0E7FF", text: "#4338CA" }, // Indigo
+        { bg: "#DCFCE7", text: "#15803D" }, // Green
+        { bg: "#FFEDD5", text: "#C2410C" }, // Orange
+        { bg: "#FCE7F3", text: "#BE185D" }, // Pink
+        { bg: "#FEF3C7", text: "#B45309" }, // Amber
+        { bg: "#E0F2FE", text: "#0369A1" }, // Sky
+        { bg: "#F3E8FF", text: "#7E22CE" }  // Purple
     ];
     const index = name.charCodeAt(0) % palettes.length;
     return palettes[index];
@@ -87,9 +87,10 @@ window.editRecord = function(id) {
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
     submitBtn.innerHTML = '<i class="material-icons">edit</i> บันทึกการแก้ไข';
-    submitBtn.classList.add("btn-main", "edit-mode"); // Add style class
+    submitBtn.classList.add("edit-mode");
     
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll to form
+    document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
 }
 
 function resetSubmitButton() {
@@ -103,7 +104,6 @@ async function loadMasterData() {
     const filterCat = document.getElementById("filter-category");
     const filterMethod = document.getElementById("filter-method");
 
-    // Helper for dropdowns
     const fillSelect = (el, items) => {
         if(!el) return;
         el.innerHTML = '<option value="">ทั้งหมด</option>';
@@ -125,18 +125,16 @@ async function loadMasterData() {
         if(masterCategories.length===0) masterCategories=["อาหาร","เดินทาง","ช้อปปิ้ง","อื่นๆ"];
         if(methods.length===0) methods=["เงินสด","โอนเงิน"];
 
-        // Fill Dropdowns
         fillSelect(filterCat, masterCategories);
         fillSelect(methodSelect, methods);
         fillSelect(filterMethod, methods);
 
-        // Render Chips
         renderCategoryChips();
 
     } catch(e) { console.error(e); }
 }
 
-// --- Logic Render Chips ---
+// --- Render Chips ---
 function renderCategoryChips() {
     const container = document.getElementById("category-container");
     if(!container) return;
@@ -144,12 +142,12 @@ function renderCategoryChips() {
 
     masterCategories.forEach(cat => {
         const btn = document.createElement("div");
-        btn.className = "chip-btn";
+        btn.className = "cat-chip-btn";
         btn.textContent = cat;
         
         if (selectedCategories.includes(cat)) {
             btn.classList.add("active");
-            btn.innerHTML = `<i class="material-icons" style="font-size:14px;">check</i> ${cat}`;
+            btn.innerHTML = `<i class="material-icons" style="font-size:16px;">check</i> ${cat}`;
         }
 
         btn.onclick = () => {
@@ -225,7 +223,6 @@ function renderList() {
         catHtml = cats.map(c => {
             if(!c) return "";
             const color = getColorForCategory(c);
-            // Pill Style with Color
             return `<span style="background:${color.bg}; color:${color.text}; padding:4px 10px; border-radius:50px; font-size:12px; font-weight:600; margin-right:4px;">${c}</span>`;
         }).join("");
 
@@ -302,7 +299,7 @@ function setupEventListeners() {
             const newRec = {
                 date: document.getElementById("date").value,
                 item: document.getElementById("item").value,
-                category: selectedCategories, // Use Array
+                category: selectedCategories, 
                 method: document.getElementById("method").value,
                 income: parseFloat(incInp.value) || 0,
                 expense: parseFloat(expInp.value) || 0,
@@ -310,7 +307,7 @@ function setupEventListeners() {
             };
             saveRecord(newRec);
             form.reset();
-            selectedCategories = []; // Reset Chips
+            selectedCategories = [];
             renderCategoryChips();
             document.getElementById("date").valueAsDate = new Date();
         });
