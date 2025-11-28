@@ -1,327 +1,345 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <title>My Budget - Fixed Icons</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+// --- main.js (Fixed Icons & Tag Layout) ---
+import { db } from "./firebase-config.js";
+import { 
+    collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+let allRecords = [];
+let filteredRecords = [];
+let currentPage = 1;
+let editingId = null;
+let selectedCategories = []; // สำหรับ Chips
+const recordsCol = collection(db, "records"); 
 
-  <style>
-    :root {
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --text-main: #0f172a;
-      --text-sub: #475569;
-      --glass-bg: rgba(255, 255, 255, 0.95);
-      --glass-border: 1px solid rgba(255, 255, 255, 1);
-      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-      --radius: 20px;
-    }
+// Global variable for master data
+let masterCategories = [];
 
-    * { box-sizing: border-box; outline: none; font-family: "Kanit", sans-serif !important; }
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadMasterData();
+    const dateInput = document.getElementById('date');
+    if(dateInput) dateInput.valueAsDate = new Date();
+    subscribeToFirestore();
+    setupEventListeners();
+});
 
-    /* Fix Icon Rendering */
-    .material-icons {
-      font-family: 'Material Icons' !important; /* บังคับใช้ฟ้อนต์ไอคอน */
-      font-weight: normal;
-      font-style: normal;
-      font-size: 24px;
-      display: inline-block;
-      line-height: 1;
-      text-transform: none;
-      letter-spacing: normal;
-      word-wrap: normal;
-      white-space: nowrap;
-      direction: ltr;
-      vertical-align: middle; /* จัดกึ่งกลางกับตัวหนังสือ */
-    }
+// Helper: Color Palettes
+function getColorForCategory(name) {
+    const palettes = [
+        { bg: "#E0E7FF", text: "#4338ca" }, // Indigo
+        { bg: "#DCFCE7", text: "#15803D" }, // Green
+        { bg: "#FFEDD5", text: "#C2410C" }, // Orange
+        { bg: "#FCE7F3", text: "#BE185D" }, // Pink
+        { bg: "#FEF3C7", text: "#B45309" }, // Amber
+        { bg: "#E0F2FE", text: "#0369A1" }, // Sky
+        { bg: "#F3E8FF", text: "#7E22CE" }  // Purple
+    ];
+    const index = name.charCodeAt(0) % palettes.length;
+    return palettes[index];
+}
 
-    body {
-      margin: 0; padding: 0;
-      color: var(--text-main);
-      min-height: 100vh;
-      background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
-      background-size: 200% 200%;
-      animation: gradientBG 10s ease infinite;
-      display: flex; justify-content: center; padding: 40px 20px;
-    }
+function subscribeToFirestore() {
+    const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
+        allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        applyFilters(); 
+    }, (error) => { console.error(error); });
+}
 
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
+async function saveRecord(rec) {
+    try {
+        if (editingId) {
+            await updateDoc(doc(db, "records", editingId), rec);
+            editingId = null;
+            resetSubmitButton();
+        } else {
+            rec.createdAt = serverTimestamp();
+            await addDoc(recordsCol, rec);
+        }
+    } catch (err) { alert("Error: " + err.message); }
+}
 
-    .glass-container {
-      width: 100%; max-width: 1000px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-xl);
-      border: var(--glass-border);
-      padding: 40px;
-      display: flex; flex-direction: column; gap: 30px;
-    }
+window.deleteRecord = async function(id) {
+    if(!confirm("ลบรายการนี้?")) return;
+    try { await deleteDoc(doc(db, "records", id)); } catch (err) { alert("Error"); }
+}
 
-    /* Header */
-    .header-section { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px; }
-    .brand-title { font-size: 28px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 10px; }
-    .brand-title i { font-size: 36px; }
+window.editRecord = function(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
 
-    .stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 600px; }
-    .stat-box {
-      background: #fff; padding: 16px 20px; border-radius: 16px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;
-      display: flex; flex-direction: column;
-    }
-    .stat-label { font-size: 14px; color: var(--text-sub); font-weight: 500; }
-    .stat-val { font-size: 24px; font-weight: 700; margin-top: 4px; color: #1e293b; }
-    .val-inc { color: #15803d !important; }
-    .val-exp { color: #b91c1c !important; }
-    .val-net { color: #1d4ed8 !important; }
-
-    /* Form */
-    .form-card { background: #fff; padding: 24px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-    .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px dashed #cbd5e1; }
-    .fh-title { font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
-    .fh-title i { color: var(--primary); font-size: 24px; }
+    document.getElementById("date").value = rec.date;
+    document.getElementById("item").value = rec.item;
     
-    .setting-link { font-size: 13px; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px; background: #eef2ff; padding: 4px 12px; border-radius: 8px; font-weight: 500; }
-    .setting-link i { font-size: 16px; }
+    // Set Chips Active
+    selectedCategories = Array.isArray(rec.category) ? rec.category : [rec.category];
+    renderCategoryChips(); 
 
-    .form-layout { display: grid; grid-template-columns: 160px 1fr 1fr; gap: 20px; align-items: start; }
-    .input-wrapper { display: flex; flex-direction: column; gap: 6px; }
-    .lbl { font-size: 14px; font-weight: 600; color: var(--text-main); }
+    document.getElementById("method").value = rec.method;
     
-    .std-input {
-      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1;
-      background: #f8fafc; font-size: 15px; color: #0f172a; height: 44px;
-    }
-    .std-input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
-    .std-input:disabled { background: #f1f5f9; cursor: not-allowed; color: #94a3b8; }
-
-    .category-container {
-      display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; 
-      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; min-height: 50px;
-    }
-    .cat-chip-btn {
-      border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-      padding: 6px 14px; border-radius: 50px; font-size: 13px; cursor: pointer;
-      font-weight: 500; display: flex; align-items: center; gap: 6px;
-    }
-    .cat-chip-btn:hover { background: #f1f5f9; transform: translateY(-1px); }
-    .cat-chip-btn.active {
-      background: var(--primary); color: #fff; border-color: var(--primary);
-      box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
-    }
-    .cat-chip-btn i { font-size: 16px; }
-
-    .money-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    .inp-inc { background: #f0fdf4; border-color: #86efac; color: #166534; font-weight: 700; }
-    .inp-exp { background: #fef2f2; border-color: #fca5a5; color: #991b1b; font-weight: 700; }
-
-    .form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 10px; }
-    .btn-main {
-      background: var(--primary); color: #fff; border: none; padding: 10px 24px; border-radius: 10px;
-      font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
-    }
-    .btn-main:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35); }
-    .btn-main.edit-mode { background: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25); }
-    .btn-sec {
-      background: #fff; border: 1px solid #cbd5e1; color: #475569; padding: 10px 20px; border-radius: 10px;
-      font-weight: 600; cursor: pointer;
-    }
-
-    /* Table Section */
-    .table-card { background: #fff; padding: 0; border-radius: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; }
-    .table-toolbar { padding: 20px; background: #fcfcfc; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px; }
-    .tbl-title { font-size: 18px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    const incInp = document.getElementById("income");
+    const expInp = document.getElementById("expense");
+    incInp.value = rec.income || "";
+    expInp.value = rec.expense || "";
+    toggleInputState(incInp, expInp);
     
-    .filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .dropdown-filter {
-      padding: 0 12px; border-radius: 10px; border: 1px solid #cbd5e1;
-      background: #fff; font-size: 13px; color: #334155; cursor: pointer; height: 40px;
-    }
+    document.getElementById("note").value = rec.note || "";
+
+    editingId = id;
+    const submitBtn = document.querySelector("#entry-form button[type='submit']");
+    submitBtn.innerHTML = '<i class="material-icons">edit</i> บันทึกการแก้ไข';
+    submitBtn.classList.add("edit-mode");
     
-    .search-box { position: relative; flex: 1; min-width: 200px; }
-    .search-box input {
-      width: 100%; padding-left: 40px; border-radius: 50px; border: 1px solid #cbd5e1; height: 40px; background: #fff; font-size: 14px;
-    }
-    .search-icon { position: absolute; left: 12px; top: 10px; color: #94a3b8; font-size: 20px; }
+    // Scroll to form
+    document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
+}
 
-    .btn-refresh {
-      width: 40px; height: 40px; border-radius: 50%; border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-    }
-    .btn-refresh i { font-size: 20px; }
+function resetSubmitButton() {
+    const submitBtn = document.querySelector("#entry-form button[type='submit']");
+    submitBtn.innerHTML = '<i class="material-icons">save</i> บันทึกข้อมูล';
+    submitBtn.classList.remove("edit-mode");
+}
 
-    /* Table */
-    .table-wrapper { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; min-width: 900px; }
-    thead { background: #f8fafc; }
-    th { text-align: left; padding: 16px; color: #475569; font-size: 13px; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
-    td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 14px; color: #1e293b; }
-    tr:hover { background: #f8fafc; }
+async function loadMasterData() {
+    const methodSelect = document.getElementById("method");
+    const filterCat = document.getElementById("filter-category");
+    const filterMethod = document.getElementById("filter-method");
 
-    .action-btn {
-      width: 36px; height: 36px; border-radius: 10px; border: none;
-      display: inline-flex; align-items: center; justify-content: center;
-      cursor: pointer; margin-right: 4px; transition: 0.2s;
-    }
-    .action-btn i { font-size: 18px; }
-    .ab-edit { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
-    .ab-del { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    const fillSelect = (el, items) => {
+        if(!el) return;
+        el.innerHTML = '<option value="">ทั้งหมด</option>';
+        if(el.id === "method") el.innerHTML = '<option value="">เลือก...</option>';
+        items.forEach(i => el.innerHTML += `<option value="${i}">${i}</option>`);
+    };
 
-    .footer { text-align: center; font-size: 12px; color: #64748b; margin-top: 20px; }
+    try {
+        const catSnap = await getDocs(collection(db, "categories"));
+        masterCategories = []; 
+        catSnap.forEach(d => masterCategories.push(d.data().name)); 
+        masterCategories.sort();
 
-    @media (max-width: 900px) {
-      .form-layout { grid-template-columns: 1fr 1fr; }
-      .header-section { flex-direction: column; align-items: flex-start; }
-      .stats-bar { max-width: 100%; }
-    }
-  </style>
-</head>
-<body>
+        const methSnap = await getDocs(collection(db, "methods"));
+        let methods = []; 
+        methSnap.forEach(d => methods.push(d.data().name)); 
+        methods.sort();
 
-  <div class="glass-container">
-    
-    <header class="header-section">
-      <div class="brand-title">
-        <i class="material-icons">donut_small</i> My Budget
-      </div>
+        if(masterCategories.length===0) masterCategories=["อาหาร","เดินทาง","ช้อปปิ้ง","อื่นๆ"];
+        if(methods.length===0) methods=["เงินสด","โอนเงิน"];
 
-      <div class="stats-bar">
-        <div class="stat-box">
-          <span class="stat-label">รายรับ</span>
-          <span class="stat-val val-inc" id="sum-income">0.00</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">รายจ่าย</span>
-          <span class="stat-val val-exp" id="sum-expense">0.00</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">คงเหลือ</span>
-          <span class="stat-val val-net" id="sum-net">0.00</span>
-        </div>
-      </div>
-    </header>
+        fillSelect(filterCat, masterCategories);
+        fillSelect(methodSelect, methods);
+        fillSelect(filterMethod, methods);
 
-    <section class="form-card">
-      <div class="form-header">
-        <div class="fh-title">
-          <i class="material-icons">edit_note</i> บันทึกรายการ
-        </div>
-        <a href="manage.html" class="setting-link">
-          <i class="material-icons">settings</i> จัดการหมวดหมู่
-        </a>
-      </div>
+        renderCategoryChips();
 
-      <form id="entry-form" class="form-layout">
-        <div class="input-wrapper">
-          <label class="lbl">วันที่</label>
-          <input type="date" id="date" class="std-input" required>
-        </div>
-        <div class="input-wrapper">
-          <label class="lbl">ชื่อรายการ</label>
-          <input type="text" id="item" class="std-input" placeholder="ระบุชื่อรายการ..." required>
-        </div>
+    } catch(e) { console.error(e); }
+}
 
-        <div class="input-wrapper" style="grid-column: 1 / -1;">
-          <label class="lbl">หมวดหมู่ <span style="font-weight:400; color:#94a3b8; font-size:12px;">(เลือกได้หลายข้อ)</span></label>
-          <div id="category-container" class="category-container">
-             <span style="font-size:13px; color:#94a3b8;">กำลังโหลด...</span>
-          </div>
-          <input type="hidden" id="category-value">
-        </div>
+// --- Render Chips ---
+function renderCategoryChips() {
+    const container = document.getElementById("category-container");
+    if(!container) return;
+    container.innerHTML = "";
 
-        <div class="input-wrapper" style="grid-column: 1 / -1;">
-           <div class="money-grid">
-             <div>
-               <label class="lbl" style="color:#15803d">รายรับ (+)</label>
-               <input type="number" id="income" class="std-input inp-inc" placeholder="0.00" min="0" step="0.01">
-             </div>
-             <div>
-               <label class="lbl" style="color:#b91c1c">รายจ่าย (-)</label>
-               <input type="number" id="expense" class="std-input inp-exp" placeholder="0.00" min="0" step="0.01">
-             </div>
-           </div>
-        </div>
-
-        <div class="input-wrapper">
-          <label class="lbl">วิธีชำระ</label>
-          <select id="method" class="std-input" required>
-            <option value="">เลือก...</option>
-          </select>
-        </div>
-        <div class="input-wrapper">
-          <label class="lbl">หมายเหตุ</label>
-          <input type="text" id="note" class="std-input" placeholder="...">
-        </div>
-
-        <div class="form-actions" style="grid-column: 1 / -1;">
-           <button type="reset" class="btn-sec">ล้างค่า</button>
-           <button type="submit" class="btn-main">
-             <i class="material-icons">save</i> บันทึกข้อมูล
-           </button>
-        </div>
-      </form>
-    </section>
-
-    <section class="table-card">
-      <div class="table-toolbar">
-        <div class="tbl-title"><i class="material-icons">history</i> ประวัติรายการ</div>
+    masterCategories.forEach(cat => {
+        const btn = document.createElement("div");
+        btn.className = "cat-chip-btn";
+        btn.textContent = cat;
         
-        <div class="filter-row">
-           <input type="month" id="filter-month" class="dropdown-filter">
-           <select id="filter-category" class="dropdown-filter" style="min-width:120px;"></select>
-           <select id="filter-method" class="dropdown-filter" style="min-width:120px;"></select>
+        if (selectedCategories.includes(cat)) {
+            btn.classList.add("active");
+            btn.innerHTML = `<i class="material-icons" style="font-size:16px;">check</i> ${cat}`;
+        }
 
-           <div class="search-box">
-             <i class="material-icons search-icon">search</i>
-             <input type="text" id="filter-text" placeholder="ค้นหา...">
-           </div>
-           
-           <button id="clear-filter" class="btn-refresh" title="รีเซ็ต">
-             <i class="material-icons">refresh</i>
-           </button>
-        </div>
-      </div>
+        btn.onclick = () => {
+            if (selectedCategories.includes(cat)) {
+                selectedCategories = selectedCategories.filter(c => c !== cat);
+            } else {
+                selectedCategories.push(cat);
+            }
+            renderCategoryChips();
+        };
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th width="15%">วันที่ / เวลา</th>
-              <th width="20%">รายการ</th>
-              <th width="20%">หมวดหมู่</th>
-              <th width="10%" style="text-align:right;">รายรับ</th>
-              <th width="10%" style="text-align:right;">รายจ่าย</th>
-              <th width="10%" style="text-align:center;">วิธี</th>
-              <th width="15%" style="text-align:center;">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody id="table-body">
-            </tbody>
-        </table>
-      </div>
+        container.appendChild(btn);
+    });
+}
 
-      <div style="padding:20px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0;">
-         <div style="font-size:13px; color:#64748b;">
-           แสดง <select id="page-size" style="border:1px solid #cbd5e1; border-radius:6px; padding:2px;"><option value="10">10</option><option value="20">20</option></select> รายการ
-         </div>
-         <div id="pagination-controls" style="display:flex; gap:8px;"></div>
-      </div>
-    </section>
+window.changePage = function(delta) { currentPage += delta; renderList(); }
 
-    <div class="footer">Copyright © 2024 Yutthapong R. All rights reserved.</div>
-  </div>
+function applyFilters() {
+    const fMonth = document.getElementById("filter-month")?.value;
+    const fCat = document.getElementById("filter-category")?.value;
+    const fMethod = document.getElementById("filter-method")?.value;
+    const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
-  <script type="module" src="main.js"></script>
-</body>
-</html>
+    filteredRecords = allRecords.filter(r => {
+        const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
+        
+        let matchCat = true;
+        if (fCat) {
+            if (Array.isArray(r.category)) matchCat = r.category.includes(fCat);
+            else matchCat = r.category === fCat;
+        }
+
+        const matchMethod = fMethod ? r.method === fMethod : true;
+        const catText = Array.isArray(r.category) ? r.category.join(" ") : (r.category || "");
+        
+        const matchText = fText ? (
+            (r.item || "").toLowerCase().includes(fText) ||       
+            (r.note || "").toLowerCase().includes(fText) ||       
+            catText.toLowerCase().includes(fText) ||  
+            (r.method || "").toLowerCase().includes(fText) ||     
+            (r.income || 0).toString().includes(fText) ||         
+            (r.expense || 0).toString().includes(fText)           
+        ) : true;
+        return matchMonth && matchCat && matchMethod && matchText;
+    });
+    currentPage = 1; renderList(); updateSummary();
+}
+
+function renderList() {
+    const container = document.getElementById("table-body");
+    if(!container) return; container.innerHTML = "";
+
+    const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
+    const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    if(displayItems.length === 0) {
+        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#94a3b8;">ไม่มีรายการ...</td></tr>`;
+        return;
+    }
+
+    displayItems.forEach(r => {
+        let timeStr = "";
+        if (r.createdAt && r.createdAt.seconds) {
+            timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
+        }
+
+        let catHtml = "";
+        const cats = Array.isArray(r.category) ? r.category : [r.category];
+        catHtml = cats.map(c => {
+            if(!c) return "";
+            const color = getColorForCategory(c);
+            // FIXED: Tag wrapped with style
+            return `<span class="cat-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
+        }).join("");
+
+        const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "-";
+        const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "-";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>
+                <div style="font-weight:600; color:#1e293b;">${r.date}</div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${timeStr}</div>
+            </td>
+            <td>${r.item} <div style="font-size:12px; color:#94a3b8; margin-top:2px;">${r.note || ''}</div></td>
+            
+            <td>
+               <div class="tags-wrapper">${catHtml}</div>
+            </td>
+
+            <td style="text-align:right; color:#16a34a; font-weight:700;">${incVal}</td>
+            <td style="text-align:right; color:#dc2626; font-weight:700;">${expVal}</td>
+            <td style="text-align:center;"><span class="badge-method">${r.method}</span></td>
+            <td style="text-align:center;">
+               <button class="action-btn ab-edit" onclick="window.editRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">edit</i></button>
+               <button class="action-btn ab-del" onclick="window.deleteRecord('${r.id}')"><i class="material-icons" style="font-size:18px;">delete</i></button>
+            </td>
+        `;
+        container.appendChild(tr);
+    });
+
+    const controls = document.getElementById("pagination-controls");
+    if(controls) {
+        controls.innerHTML = `
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;"><i class="material-icons" style="font-size:16px; color:#64748b;">chevron_left</i></button>
+        <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:white; width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; cursor:pointer;"><i class="material-icons" style="font-size:16px; color:#64748b;">chevron_right</i></button>`;
+    }
+}
+
+function updateSummary() {
+    const totalInc = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.income)||0), 0);
+    const totalExp = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.expense)||0), 0);
+    const net = totalInc - totalExp;
+
+    document.getElementById("sum-income").innerText = formatNumber(totalInc);
+    document.getElementById("sum-expense").innerText = formatNumber(totalExp);
+    document.getElementById("sum-net").innerText = formatNumber(net);
+}
+
+function formatNumber(num) {
+    return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function toggleInputState(active, passive) {
+    if (active.value && parseFloat(active.value) > 0) {
+        passive.value = ""; passive.disabled = true;
+    } else {
+        passive.disabled = false;
+    }
+}
+
+function preventInvalidChars(e) { if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault(); }
+
+function setupEventListeners() {
+    const form = document.getElementById("entry-form");
+    const incInp = document.getElementById("income");
+    const expInp = document.getElementById("expense");
+
+    if(form) {
+        incInp.addEventListener("input", () => toggleInputState(incInp, expInp));
+        expInp.addEventListener("input", () => toggleInputState(expInp, incInp));
+        incInp.addEventListener("keydown", preventInvalidChars);
+        expInp.addEventListener("keydown", preventInvalidChars);
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            if(selectedCategories.length===0) { alert("กรุณาเลือกหมวดหมู่ครับ"); return; }
+
+            const newRec = {
+                date: document.getElementById("date").value,
+                item: document.getElementById("item").value,
+                category: selectedCategories, 
+                method: document.getElementById("method").value,
+                income: parseFloat(incInp.value) || 0,
+                expense: parseFloat(expInp.value) || 0,
+                note: document.getElementById("note").value
+            };
+            saveRecord(newRec);
+            form.reset();
+            selectedCategories = [];
+            renderCategoryChips();
+            document.getElementById("date").valueAsDate = new Date();
+        });
+
+        form.addEventListener("reset", () => {
+            editingId = null;
+            resetSubmitButton();
+            setTimeout(() => {
+                incInp.disabled=false; expInp.disabled=false;
+                selectedCategories = []; 
+                renderCategoryChips();
+                document.getElementById("date").valueAsDate = new Date();
+            },0);
+        });
+    }
+
+    const filterText = document.getElementById("filter-text");
+    if(filterText) filterText.addEventListener("input", applyFilters);
+    document.getElementById("filter-month")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-category")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-method")?.addEventListener("change", applyFilters);
+    document.getElementById("clear-filter")?.addEventListener("click", () => {
+        document.getElementById("filter-month").value = "";
+        document.getElementById("filter-category").value = "";
+        document.getElementById("filter-method").value = "";
+        if(filterText) filterText.value = "";
+        applyFilters();
+    });
+    document.getElementById("page-size")?.addEventListener("change", () => { currentPage = 1; renderList(); });
+}
