@@ -1,4 +1,4 @@
-// --- main.js (Final Version) ---
+// --- main.js (อัปเกรดระบบค้นหาให้หาเจอทุกช่อง) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, 
@@ -17,161 +17,115 @@ let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
 
-// อ้างอิง Collection ใน Firestore
 const recordsCol = collection(db, "records"); 
 
-// --- เริ่มทำงานเมื่อโหลดหน้าเว็บ ---
+// --- เริ่มทำงาน ---
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. โหลดข้อมูลหมวดหมู่และวิธีจ่าย (Master Data)
     await loadMasterData();
-
-    // 2. ตั้งค่าวันที่ในฟอร์มเป็นวันปัจจุบัน
     const dateInput = document.getElementById('date');
     if(dateInput) dateInput.valueAsDate = new Date();
-
-    // 3. เชื่อมต่อ Firebase เพื่อดึงรายการแบบ Real-time
     subscribeToFirestore();
-
-    // 4. ตั้งค่าปุ่มกดและช่องค้นหาต่างๆ
     setupEventListeners();
 });
 
-// --- ส่วนจัดการ Firebase (รายการรับ-จ่าย) ---
-
-// ฟังก์ชันดึงข้อมูลแบบ Real-time (ข้อมูลเปลี่ยน ตารางเปลี่ยนทันที)
+// --- Firebase Real-time ---
 function subscribeToFirestore() {
-    // ดึงข้อมูลโดยเรียงจากวันที่ล่าสุดก่อน
     const q = query(recordsCol, orderBy("date", "desc"));
-
     onSnapshot(q, (snapshot) => {
-        // แปลงข้อมูลจาก Firestore เป็น Array ของเรา
-        allRecords = snapshot.docs.map(d => ({ 
-            id: d.id, 
-            ...d.data() 
-        }));
-        
-        // เมื่อข้อมูลมาใหม่ ให้สั่งกรองและแสดงผลทันที
+        allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         applyFilters();
     }, (error) => {
         console.error("Error watching records:", error);
-        const tbody = document.getElementById("table-body");
-        if(tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">โหลดข้อมูลไม่สำเร็จ (ตรวจสอบ Internet หรือ Security Rules)</td></tr>`;
     });
 }
 
-// ฟังก์ชันเพิ่มรายการใหม่
 export async function addRecord(rec) {
     try {
-        rec.createdAt = serverTimestamp(); // เก็บเวลาที่บันทึกจริง
+        rec.createdAt = serverTimestamp();
         await addDoc(recordsCol, rec);
         alert("✅ บันทึกข้อมูลเรียบร้อย");
     } catch (err) {
-        console.error("Error adding record:", err);
         alert("❌ บันทึกไม่สำเร็จ: " + err.message);
     }
 }
 
-// ฟังก์ชันลบรายการ (ต้องผูกกับ window เพื่อให้ HTML เรียกใช้ได้)
 window.deleteRecord = async function(id) {
     if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
-    try {
-        await deleteDoc(doc(db, "records", id));
-    } catch (err) {
-        console.error("Error deleting record:", err);
-        alert("❌ ลบไม่สำเร็จ");
-    }
+    try { await deleteDoc(doc(db, "records", id)); } 
+    catch (err) { alert("❌ ลบไม่สำเร็จ"); }
 }
 
-// --- ส่วนจัดการ Master Data (หมวดหมู่ / วิธีจ่าย) ---
+// --- Master Data ---
 async function loadMasterData() {
     const catSelect = document.getElementById("category");
     const methodSelect = document.getElementById("method");
     const filterCat = document.getElementById("filter-category");
     const filterMethod = document.getElementById("filter-method");
 
-    // ฟังก์ชันช่วยสร้าง <option>
     const fillOptions = (elements, items) => {
         elements.forEach(el => {
             if (!el) return;
             const currentVal = el.value;
             el.innerHTML = '<option value="">-- เลือก --</option>';
-            items.forEach(item => {
-                el.innerHTML += `<option value="${item}">${item}</option>`;
-            });
+            items.forEach(item => { el.innerHTML += `<option value="${item}">${item}</option>`; });
             if(currentVal) el.value = currentVal;
         });
     };
 
     try {
-        // ดึงหมวดหมู่
-        const catSnapshot = await getDocs(collection(db, "categories"));
-        let categories = [];
-        catSnapshot.forEach(doc => categories.push(doc.data().name));
-        categories.sort(); // เรียงก-ฮ
+        const catSnap = await getDocs(collection(db, "categories"));
+        let categories = []; catSnap.forEach(d => categories.push(d.data().name)); categories.sort();
 
-        // ดึงวิธีจ่าย
-        const methodSnapshot = await getDocs(collection(db, "methods"));
-        let methods = [];
-        methodSnapshot.forEach(doc => methods.push(doc.data().name));
-        methods.sort();
+        const methSnap = await getDocs(collection(db, "methods"));
+        let methods = []; methSnap.forEach(d => methods.push(d.data().name)); methods.sort();
 
-        // ค่า Default กรณีไม่มีข้อมูลในฐานข้อมูล
         if (categories.length === 0) categories = ["อาหาร", "เดินทาง", "ช้อปปิ้ง", "เงินเดือน", "อื่นๆ"];
         if (methods.length === 0) methods = ["เงินสด", "โอนเงิน", "บัตรเครดิต"];
 
-        // เติมใส่ Dropdown ทั้งหน้าฟอร์มและหน้ากรอง
         fillOptions([catSelect, filterCat], categories);
         fillOptions([methodSelect, filterMethod], methods);
-    } catch (error) {
-        console.error("Error loading master data:", error);
-    }
+    } catch (error) { console.error("Error master data:", error); }
 }
 
-// --- ฟังก์ชันเปลี่ยนหน้า (Pagination) ---
-window.changePage = function(delta) {
-    currentPage += delta;
-    renderTable();
-}
+window.changePage = function(delta) { currentPage += delta; renderTable(); }
 
-// --- ฟังก์ชันหลัก: กรองและค้นหาข้อมูล ---
+// --- LOGIC การกรอง (แก้ไขจุดนี้) ---
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
     const fCat = document.getElementById("filter-category")?.value;
     const fMethod = document.getElementById("filter-method")?.value;
+    // ตัดช่องว่างหน้าหลังออก เพื่อความแม่นยำ
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
-        // กรองเดือน
         const matchMonth = fMonth ? (r.date && r.date.startsWith(fMonth)) : true;
-        // กรองหมวดหมู่
         const matchCat = fCat ? r.category === fCat : true;
-        // กรองวิธีจ่าย
         const matchMethod = fMethod ? r.method === fMethod : true;
         
-        // ค้นหาข้อความ (ทั้งในชื่อรายการ และ หมายเหตุ)
+        // --- จุดที่แก้ไข: ค้นหาครอบคลุมทุกฟิลด์ ---
         const matchText = fText ? (
-            (r.item || "").toLowerCase().includes(fText) || 
-            (r.note || "").toLowerCase().includes(fText)
+            (r.item || "").toLowerCase().includes(fText) ||       // ชื่อรายการ
+            (r.note || "").toLowerCase().includes(fText) ||       // หมายเหตุ
+            (r.category || "").toLowerCase().includes(fText) ||   // หมวดหมู่
+            (r.method || "").toLowerCase().includes(fText) ||     // วิธีจ่าย
+            (r.income || 0).toString().includes(fText) ||         // ยอดรายรับ (เช่นค้น 500)
+            (r.expense || 0).toString().includes(fText)           // ยอดรายจ่าย
         ) : true;
 
         return matchMonth && matchCat && matchMethod && matchText;
     });
 
-    // รีเซ็ตกลับไปหน้า 1 ทุกครั้งที่มีการค้นหา/กรอง
     currentPage = 1;
     renderTable();
     updateSummary();
 }
 
-// --- ฟังก์ชันแสดงผลตาราง ---
 function renderTable() {
     const tbody = document.getElementById("table-body");
     if(!tbody) return;
     tbody.innerHTML = "";
 
-    // คำนวณ Pagination
-    const pageSizeEl = document.getElementById("page-size");
-    const pageSize = pageSizeEl ? parseInt(pageSizeEl.value) : 10;
+    const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
 
     if (currentPage < 1) currentPage = 1;
@@ -181,7 +135,6 @@ function renderTable() {
     const end = start + pageSize;
     const displayItems = filteredRecords.slice(start, end);
 
-    // วาดแต่ละแถว
     displayItems.forEach(r => {
         const tr = document.createElement("tr");
         const incomeTxt = r.income > 0 ? formatNumber(r.income) : "-";
@@ -195,33 +148,23 @@ function renderTable() {
             <td class="text-right" style="color:${r.expense > 0 ? '#dc2626' : 'inherit'}">${expenseTxt}</td>
             <td>${r.method}</td>
             <td style="font-size:12px; color:#64748b;">${r.note || ""}</td>
-            <td>
-               <button class="btn btn-small btn-danger" onclick="window.deleteRecord('${r.id}')">ลบ</button>
-            </td>
+            <td><button class="btn btn-small btn-danger" onclick="window.deleteRecord('${r.id}')">ลบ</button></td>
         `;
         tbody.appendChild(tr);
     });
 
-    renderPaginationControls(totalPages, filteredRecords.length);
+    const controls = document.getElementById("pagination-controls");
+    if(controls) {
+        controls.innerHTML = `<span>รวม ${filteredRecords.length} รายการ | หน้า ${currentPage}/${totalPages} </span>
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''}>◀</button>
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''}>▶</button>`;
+    }
 }
 
-// --- ฟังก์ชันแสดงปุ่มเปลี่ยนหน้า ---
-function renderPaginationControls(totalPages, totalItems) {
-    const container = document.getElementById("pagination-controls");
-    if(!container) return;
-    
-    let html = `<span>รวม ${totalItems} รายการ | หน้า ${currentPage}/${totalPages} </span>`;
-    html += `<button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''}>◀</button>`;
-    html += `<button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''}>▶</button>`;
-    container.innerHTML = html;
-}
-
-// --- ฟังก์ชันสรุปยอดเงิน ---
 function updateSummary() {
     const totalInc = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.income)||0), 0);
     const totalExp = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.expense)||0), 0);
-    const net = totalInc - totalExp;
-
+    
     const sumIncEl = document.getElementById("sum-income");
     const sumExpEl = document.getElementById("sum-expense");
     const sumNetEl = document.getElementById("sum-net");
@@ -229,19 +172,17 @@ function updateSummary() {
     if(sumIncEl) sumIncEl.innerText = `รายรับ: ${formatNumber(totalInc)}`;
     if(sumExpEl) sumExpEl.innerText = `รายจ่าย: ${formatNumber(totalExp)}`;
     if(sumNetEl) {
+        const net = totalInc - totalExp;
         sumNetEl.innerText = `สุทธิ: ${formatNumber(net)}`;
         sumNetEl.style.color = net >= 0 ? "#16a34a" : "#dc2626";
     }
 }
 
-// --- ฟังก์ชันจัดรูปแบบตัวเลข (มีลูกน้ำ และทศนิยม 2 ตำแหน่ง) ---
 function formatNumber(num) {
     return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// --- ตั้งค่า Event Listeners ---
 function setupEventListeners() {
-    // 1. เมื่อกดบันทึกรายการ
     const form = document.getElementById("entry-form");
     if(form) {
         form.addEventListener("submit", (e) => {
@@ -261,18 +202,13 @@ function setupEventListeners() {
         });
     }
 
-    // 2. ตั้งค่าช่องค้นหา (ให้ทำงานทันทีเมื่อพิมพ์ - Realtime Search)
     const filterText = document.getElementById("filter-text");
-    if (filterText) {
-        filterText.addEventListener("input", applyFilters); // ใช้ input event แทน change
-    }
+    if (filterText) filterText.addEventListener("input", applyFilters);
 
-    // 3. ตั้งค่า Dropdown กรองข้อมูล (เปลี่ยนปุ๊บ กรองปั๊บ)
     document.getElementById("filter-month")?.addEventListener("change", applyFilters);
     document.getElementById("filter-category")?.addEventListener("change", applyFilters);
     document.getElementById("filter-method")?.addEventListener("change", applyFilters);
 
-    // 4. ปุ่มกรอง และ ปุ่มล้างค่า
     document.getElementById("apply-filter")?.addEventListener("click", applyFilters);
     document.getElementById("clear-filter")?.addEventListener("click", () => {
         document.getElementById("filter-month").value = "";
@@ -282,7 +218,6 @@ function setupEventListeners() {
         applyFilters();
     });
 
-    // 5. เปลี่ยนจำนวนรายการต่อหน้า
     document.getElementById("page-size")?.addEventListener("change", () => {
         currentPage = 1;
         renderTable();
