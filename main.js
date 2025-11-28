@@ -1,17 +1,16 @@
-// --- main.js (Version: Colorful Categories & Modern Buttons) ---
+// --- main.js (iOS Pastel Edition) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// Global Variables
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
 let editingId = null;
 const recordsCol = collection(db, "records"); 
 
-// --- เริ่มทำงาน ---
+// --- Start ---
 document.addEventListener('DOMContentLoaded', async () => {
     await loadMasterData();
     const dateInput = document.getElementById('date');
@@ -20,24 +19,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
 });
 
-// --- Helper: สุ่มสีพาสเทลสำหรับหมวดหมู่ ---
+// --- Pastel Colors Logic ---
 function getColorForCategory(name) {
-    // ชุดสีพาสเทล (Background, Text)
+    // Pastel Palette (Background, Text)
     const palettes = [
-        { bg: "#dbeafe", text: "#1e40af" }, // Blue
-        { bg: "#dcfce7", text: "#166534" }, // Green
-        { bg: "#fce7f3", text: "#9d174d" }, // Pink
-        { bg: "#ffedd5", text: "#9a3412" }, // Orange
-        { bg: "#f3e8ff", text: "#6b21a8" }, // Purple
-        { bg: "#e0f2fe", text: "#075985" }, // Sky
-        { bg: "#fee2e2", text: "#991b1b" }  // Red
+        { bg: "#FFDEE9", text: "#B35B76" }, // Pastel Pink
+        { bg: "#D4FC79", text: "#5D8518" }, // Pastel Green
+        { bg: "#A1C4FD", text: "#3B5C95" }, // Pastel Blue
+        { bg: "#FBC2EB", text: "#914C7A" }, // Pastel Purple
+        { bg: "#F6D365", text: "#96700D" }, // Pastel Yellow/Orange
+        { bg: "#E0C3FC", text: "#6A3A9E" }, // Lavender
+        { bg: "#8EC5FC", text: "#2A5CA1" }  // Sky
     ];
-    // ใช้ตัวอักษรตัวแรกแปลงเป็นตัวเลขเพื่อเลือกสี (เพื่อให้หมวดเดิมได้สีเดิมเสมอ)
     const index = name.charCodeAt(0) % palettes.length;
     return palettes[index];
 }
 
-// --- Firebase Functions ---
+// --- Firebase ---
 function subscribeToFirestore() {
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot) => {
@@ -50,22 +48,19 @@ async function saveRecord(rec) {
     try {
         if (editingId) {
             await updateDoc(doc(db, "records", editingId), rec);
-            alert("✅ แก้ไขข้อมูลเรียบร้อย");
-            // Reset UI
+            // alert("✅ แก้ไขเรียบร้อย");
             editingId = null;
-            const submitBtn = document.querySelector("#entry-form button[type='submit']");
-            submitBtn.innerHTML = '<span class="material-icons-round">save</span> บันทึกรายการ';
-            submitBtn.classList.remove("btn-edit-mode");
+            resetSubmitButton();
         } else {
             rec.createdAt = serverTimestamp();
             await addDoc(recordsCol, rec);
-            alert("✅ บันทึกข้อมูลเรียบร้อย");
+            // alert("✅ บันทึกเรียบร้อย");
         }
-    } catch (err) { alert("❌ Error: " + err.message); }
+    } catch (err) { alert("Error: " + err.message); }
 }
 
 window.deleteRecord = async function(id) {
-    if(!confirm("ต้องการลบรายการนี้ใช่หรือไม่?")) return;
+    if(!confirm("ลบรายการนี้?")) return;
     try { await deleteDoc(doc(db, "records", id)); } catch (err) { alert("Error"); }
 }
 
@@ -76,7 +71,6 @@ window.editRecord = function(id) {
     document.getElementById("date").value = rec.date;
     document.getElementById("item").value = rec.item;
     
-    // Multi-select Category
     const catSelect = document.getElementById("category");
     Array.from(catSelect.options).forEach(o => o.selected = false);
     if (Array.isArray(rec.category)) {
@@ -88,7 +82,6 @@ window.editRecord = function(id) {
 
     document.getElementById("method").value = rec.method;
     
-    // Toggle Inputs
     const incInp = document.getElementById("income");
     const expInp = document.getElementById("expense");
     incInp.value = rec.income || "";
@@ -99,10 +92,16 @@ window.editRecord = function(id) {
 
     editingId = id;
     const submitBtn = document.querySelector("#entry-form button[type='submit']");
-    submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกการแก้ไข';
-    submitBtn.classList.add("btn-edit-mode");
+    submitBtn.innerHTML = '<span class="material-icons-round">edit</span> บันทึกแก้ไข';
+    submitBtn.classList.add("btn-ios-edit");
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetSubmitButton() {
+    const submitBtn = document.querySelector("#entry-form button[type='submit']");
+    submitBtn.innerHTML = '<span class="material-icons-round">check</span> บันทึก';
+    submitBtn.classList.remove("btn-ios-edit");
 }
 
 async function loadMasterData() {
@@ -137,7 +136,7 @@ async function loadMasterData() {
     } catch(e) { console.error(e); }
 }
 
-window.changePage = function(delta) { currentPage += delta; renderTable(); }
+window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
     const fMonth = document.getElementById("filter-month")?.value;
@@ -157,71 +156,82 @@ function applyFilters() {
         ) : true;
         return matchMonth && matchText;
     });
-    currentPage = 1; renderTable(); updateSummary();
+    currentPage = 1; renderList(); updateSummary();
 }
 
-// --- Render Table (with Colors & Icons) ---
-function renderTable() {
-    const tbody = document.getElementById("table-body");
-    if(!tbody) return; tbody.innerHTML = "";
+// --- Render List as Cards (Mobile Style) ---
+function renderList() {
+    const container = document.getElementById("table-body");
+    if(!container) return; container.innerHTML = "";
 
-    const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
+    const pageSize = 10;
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
 
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-    displayItems.forEach(r => {
-        const tr = document.createElement("tr");
-        const incomeTxt = r.income > 0 ? formatNumber(r.income) : "-";
-        const expenseTxt = r.expense > 0 ? formatNumber(r.expense) : "-";
+    if(displayItems.length === 0) {
+        container.innerHTML = `<div class="empty-state">ไม่มีรายการ...</div>`;
+        return;
+    }
 
+    displayItems.forEach(r => {
         let timeStr = "";
         if (r.createdAt && r.createdAt.seconds) {
-            timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น.";
+            timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // Generate Colorful Category Pills
+        // Color Tags
         let catHtml = "";
         const cats = Array.isArray(r.category) ? r.category : [r.category];
         catHtml = cats.map(c => {
             if(!c) return "";
             const color = getColorForCategory(c);
-            return `<span class="cat-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
+            return `<span class="tag-pill" style="background:${color.bg}; color:${color.text};">${c}</span>`;
         }).join("");
 
-        tr.innerHTML = `
-            <td>
-                <div style="font-weight:500;">${r.date}</div>
-                <div style="font-size:11px; color:#94a3b8; display:flex; align-items:center; gap:2px;">
-                    <span class="material-icons-round" style="font-size:12px;">schedule</span> ${timeStr}
+        const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "";
+        const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "";
+
+        const card = document.createElement("div");
+        card.className = "trans-item";
+        card.innerHTML = `
+            <div class="trans-header">
+                <div>
+                   <div class="trans-date">
+                      <span class="material-icons-round" style="font-size:14px;">calendar_today</span> ${r.date} &nbsp; • &nbsp; ${timeStr}
+                   </div>
+                   <div class="trans-title">${r.item}</div>
+                   <div class="trans-tags">${catHtml}</div>
                 </div>
-            </td>
-            <td>${r.item}</td>
-            <td>${catHtml}</td>
-            <td class="text-right" style="color:#16a34a; font-weight:500;">${incomeTxt}</td>
-            <td class="text-right" style="color:#dc2626; font-weight:500;">${expenseTxt}</td>
-            <td><span style="background:#f8fafc; padding:2px 8px; border-radius:4px; border:1px solid #e2e8f0; font-size:12px;">${r.method}</span></td>
-            <td>${r.note || "-"}</td>
-            <td style="text-align:center;">
-               <button class="action-btn btn-edit-row" onclick="window.editRecord('${r.id}')" title="แก้ไข">
-                 <span class="material-icons-round" style="font-size:18px;">edit</span>
-               </button>
-               <button class="action-btn btn-del-row" onclick="window.deleteRecord('${r.id}')" title="ลบ">
-                 <span class="material-icons-round" style="font-size:18px;">delete</span>
-               </button>
-            </td>
+                <div style="text-align:right;">
+                   <div style="font-size:11px; color:#999; background:#f0f0f0; padding:2px 8px; border-radius:8px;">${r.method}</div>
+                </div>
+            </div>
+
+            <div class="trans-amounts">
+                <div class="amt-inc">${incVal}</div>
+                <div class="amt-exp">${expVal}</div>
+            </div>
+
+            ${r.note ? `<div style="font-size:12px; color:#888;">Note: ${r.note}</div>` : ''}
+
+            <div class="trans-actions">
+                <button class="action-circle act-edit" onclick="window.editRecord('${r.id}')"><span class="material-icons-round" style="font-size:18px;">edit</span></button>
+                <button class="action-circle act-del" onclick="window.deleteRecord('${r.id}')"><span class="material-icons-round" style="font-size:18px;">delete</span></button>
+            </div>
         `;
-        tbody.appendChild(tr);
+        container.appendChild(card);
     });
 
+    // Pagination
     const controls = document.getElementById("pagination-controls");
     if(controls) {
         controls.innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} class="action-btn btn-edit-row"><span class="material-icons-round">chevron_left</span></button>
-        <span style="font-size:13px; align-self:center;">หน้า ${currentPage} / ${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} class="action-btn btn-edit-row"><span class="material-icons-round">chevron_right</span></button>`;
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="border:none; background:white; width:40px; height:40px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center;"><span class="material-icons-round">chevron_left</span></button>
+        <span style="align-self:center; font-size:13px; color:#888;">${currentPage} / ${totalPages}</span>
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="border:none; background:white; width:40px; height:40px; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; align-items:center; justify-content:center;"><span class="material-icons-round">chevron_right</span></button>`;
     }
 }
 
@@ -232,9 +242,7 @@ function updateSummary() {
 
     document.getElementById("sum-income").innerText = formatNumber(totalInc);
     document.getElementById("sum-expense").innerText = formatNumber(totalExp);
-    const netEl = document.getElementById("sum-net");
-    netEl.innerText = formatNumber(net);
-    netEl.style.color = net >= 0 ? "#6366f1" : "#dc2626";
+    document.getElementById("sum-net").innerText = formatNumber(net);
 }
 
 function formatNumber(num) {
@@ -285,9 +293,7 @@ function setupEventListeners() {
 
         form.addEventListener("reset", () => {
             editingId = null;
-            const submitBtn = document.querySelector("#entry-form button[type='submit']");
-            submitBtn.innerHTML = '<span class="material-icons-round">save</span> บันทึกรายการ';
-            submitBtn.classList.remove("btn-edit-mode");
+            resetSubmitButton();
             setTimeout(() => {
                 incInp.disabled=false; expInp.disabled=false;
                 document.getElementById("date").valueAsDate = new Date();
@@ -303,5 +309,4 @@ function setupEventListeners() {
         if(filterText) filterText.value = "";
         applyFilters();
     });
-    document.getElementById("page-size")?.addEventListener("change", () => { currentPage = 1; renderTable(); });
 }
