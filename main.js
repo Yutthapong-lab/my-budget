@@ -1,4 +1,4 @@
-// --- main.js (ฉบับแก้ไขฟอนต์เสถียร) ---
+// --- main.js ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -56,93 +56,70 @@ function fetchWeather() {
     }
 }
 
-// --- Fix: PDF Export Logic (ใช้ CDN JSDelivr ที่เสถียรที่สุด) ---
+// --- Fix: PDF Export Logic (ใช้ Script Tag โหลดฟอนต์ ไม่ใช้ Fetch) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
     
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', () => {
         const originalText = btn.innerHTML;
-        // เปลี่ยนปุ่มเป็นสถานะกำลังโหลด
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้าง PDF...`;
-        btn.disabled = true;
-
+        
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // 1. ดึงฟอนต์ Sarabun ผ่าน CDN JSDelivr (เร็วและเสถียร)
-            const fontURL = "https://cdn.jsdelivr.net/gh/google/fonts/ofl/sarabun/Sarabun-Regular.ttf";
+            // ใช้ฟอนต์ Sarabun ที่โหลดมาจาก Script ได้เลย (ชื่อฟอนต์คือ 'Sarabun')
+            doc.setFont('Sarabun'); 
             
-            const fontRes = await fetch(fontURL);
-            if (!fontRes.ok) throw new Error("โหลดฟอนต์ไม่สำเร็จ");
+            doc.setFontSize(18); 
+            doc.text("My Budget Report", 14, 22);
             
-            const fontBlob = await fontRes.blob();
-            const reader = new FileReader();
-            reader.readAsDataURL(fontBlob);
+            doc.setFontSize(10); 
+            doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
+
+            const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
+            const tableRows = filteredRecords.map(r => [
+                r.date, 
+                r.item, 
+                r.income > 0 ? r.income.toFixed(2) : "-", 
+                r.expense > 0 ? r.expense.toFixed(2) : "-",
+                Array.isArray(r.category) ? r.category.join(", ") : r.category,
+                r.method
+            ]);
+
+            doc.autoTable({ 
+                head: [tableColumn], 
+                body: tableRows, 
+                startY: 35,
+                styles: { 
+                    font: 'Sarabun', 
+                    fontStyle: 'normal' 
+                },
+                headStyles: { 
+                    fillColor: [99, 102, 241],
+                    font: 'Sarabun'
+                }
+            });
+
+            // ตั้งชื่อไฟล์
+            const d = new Date();
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear() + 543;
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
             
-            reader.onloadend = function() {
-                const base64data = reader.result.split(',')[1];
-                
-                // 2. ฝังฟอนต์ลงใน PDF
-                doc.addFileToVFS("Sarabun.ttf", base64data);
-                doc.addFont("Sarabun.ttf", "Sarabun", "normal");
-                doc.setFont("Sarabun");
-
-                // --- ส่วนเนื้อหา PDF ---
-                doc.setFontSize(18); 
-                doc.text("My Budget Report", 14, 22);
-                
-                doc.setFontSize(10); 
-                doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
-
-                const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
-                const tableRows = filteredRecords.map(r => [
-                    r.date, 
-                    r.item, 
-                    r.income > 0 ? r.income.toFixed(2) : "-", 
-                    r.expense > 0 ? r.expense.toFixed(2) : "-",
-                    Array.isArray(r.category) ? r.category.join(", ") : r.category,
-                    r.method
-                ]);
-
-                // 3. สร้างตารางโดยระบุฟอนต์ Sarabun
-                doc.autoTable({ 
-                    head: [tableColumn], 
-                    body: tableRows, 
-                    startY: 35,
-                    styles: { 
-                        font: 'Sarabun', 
-                        fontStyle: 'normal' 
-                    },
-                    headStyles: { 
-                        fillColor: [99, 102, 241],
-                        font: 'Sarabun'
-                    }
-                });
-
-                // 4. ตั้งชื่อไฟล์ตามเวลา
-                const d = new Date();
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear() + 543;
-                const h = String(d.getHours()).padStart(2, '0');
-                const m = String(d.getMinutes()).padStart(2, '0');
-                const s = String(d.getSeconds()).padStart(2, '0');
-                
-                const fileName = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
-                
-                doc.save(fileName);
-                
-                // คืนค่าปุ่มกลับสู่ปกติ
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            };
+            const fileName = `my-budget_${day}${month}${year}_${h}${m}${s}.pdf`;
+            
+            doc.save(fileName);
+            
+            btn.innerHTML = originalText;
         } catch (err) {
             console.error("PDF Error:", err);
-            alert("เกิดข้อผิดพลาด: อินเทอร์เน็ตอาจมีปัญหา หรือไม่สามารถโหลดฟอนต์ไทยได้");
+            alert("เกิดข้อผิดพลาดในการสร้าง PDF");
             btn.innerHTML = originalText;
-            btn.disabled = false;
         }
     });
 }
