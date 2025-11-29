@@ -1,4 +1,4 @@
-// --- main.js ---
+// --- main.js (ฉบับแก้ไขฟอนต์เสถียร) ---
 import { db } from "./firebase-config.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -56,13 +56,14 @@ function fetchWeather() {
     }
 }
 
-// --- Fix: PDF Export Logic (เปลี่ยนลิงก์ฟอนต์ใหม่) ---
+// --- Fix: PDF Export Logic (ใช้ CDN JSDelivr ที่เสถียรที่สุด) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
     
     btn.addEventListener('click', async () => {
         const originalText = btn.innerHTML;
+        // เปลี่ยนปุ่มเป็นสถานะกำลังโหลด
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้าง PDF...`;
         btn.disabled = true;
 
@@ -70,26 +71,25 @@ function setupExportPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // --- แก้ไขจุดที่พัง: เปลี่ยน URL เป็น GitHub Raw ที่เสถียรกว่า ---
-            const fontURL = "https://raw.githubusercontent.com/google/fonts/main/ofl/sarabun/Sarabun-Regular.ttf";
+            // 1. ดึงฟอนต์ Sarabun ผ่าน CDN JSDelivr (เร็วและเสถียร)
+            const fontURL = "https://cdn.jsdelivr.net/gh/google/fonts/ofl/sarabun/Sarabun-Regular.ttf";
             
             const fontRes = await fetch(fontURL);
-            if (!fontRes.ok) throw new Error("โหลดฟอนต์ไม่สำเร็จ"); // เช็คว่าโหลดได้ไหม
+            if (!fontRes.ok) throw new Error("โหลดฟอนต์ไม่สำเร็จ");
             
             const fontBlob = await fontRes.blob();
-            
             const reader = new FileReader();
             reader.readAsDataURL(fontBlob);
             
             reader.onloadend = function() {
                 const base64data = reader.result.split(',')[1];
                 
-                // Add Font
+                // 2. ฝังฟอนต์ลงใน PDF
                 doc.addFileToVFS("Sarabun.ttf", base64data);
                 doc.addFont("Sarabun.ttf", "Sarabun", "normal");
                 doc.setFont("Sarabun");
 
-                // Content
+                // --- ส่วนเนื้อหา PDF ---
                 doc.setFontSize(18); 
                 doc.text("My Budget Report", 14, 22);
                 
@@ -106,6 +106,7 @@ function setupExportPDF() {
                     r.method
                 ]);
 
+                // 3. สร้างตารางโดยระบุฟอนต์ Sarabun
                 doc.autoTable({ 
                     head: [tableColumn], 
                     body: tableRows, 
@@ -120,7 +121,7 @@ function setupExportPDF() {
                     }
                 });
 
-                // File Name
+                // 4. ตั้งชื่อไฟล์ตามเวลา
                 const d = new Date();
                 const day = String(d.getDate()).padStart(2, '0');
                 const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -133,12 +134,13 @@ function setupExportPDF() {
                 
                 doc.save(fileName);
                 
+                // คืนค่าปุ่มกลับสู่ปกติ
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             };
         } catch (err) {
             console.error("PDF Error:", err);
-            alert("เกิดข้อผิดพลาด: ไม่สามารถโหลดฟอนต์ภาษาไทยได้ กรุณาตรวจสอบอินเทอร์เน็ต");
+            alert("เกิดข้อผิดพลาด: อินเทอร์เน็ตอาจมีปัญหา หรือไม่สามารถโหลดฟอนต์ไทยได้");
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
@@ -340,4 +342,3 @@ function setupEventListeners() {
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
-
