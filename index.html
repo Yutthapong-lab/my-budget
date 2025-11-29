@@ -285,7 +285,11 @@
                         <i class="fa-solid fa-clock-rotate-left" style="color:var(--primary);"></i> ประวัติรายการ
                     </div>
                     <div class="filter-group">
-                        <input type="month" id="filter-month" class="dropdown-filter">
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <input type="date" id="filter-start" class="dropdown-filter" title="วันที่เริ่มต้น">
+                            <span style="color:#cbd5e1;">-</span>
+                            <input type="date" id="filter-end" class="dropdown-filter" title="วันที่สิ้นสุด">
+                        </div>
                         <select id="filter-category" class="dropdown-filter"></select>
                         <select id="filter-method" class="dropdown-filter"></select>
                         <div style="position:relative; flex:1; min-width:150px;">
