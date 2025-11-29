@@ -19,21 +19,19 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.10", // แก้ไขเวอร์ชันให้ตรงกัน
+    version: "v1.0.11", 
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
-// ⚠️ เปลี่ยนเป็นอีเมล Admin ของคุณ
+// ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
-// ฟังก์ชันแปลงตัวเลข (ต้องมี!)
 function formatNumber(n) { 
     if (n === undefined || n === null || isNaN(n)) return "0.00";
     return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
 }
 
-// ฟังก์ชันแปลงวันที่ไทย
 function formatThaiDate(dateString) {
     if (!dateString) return "-";
     try {
@@ -43,7 +41,6 @@ function formatThaiDate(dateString) {
     } catch(e) { return dateString; }
 }
 
-// ฟังก์ชันเลือกสี
 function getColorForCategory(name) {
     const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
     if (!name || typeof name !== 'string') return palettes[0];
@@ -84,11 +81,10 @@ setPersistence(auth, browserSessionPersistence)
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject Footer (เฉพาะหน้าเว็บ PDF ไม่เกี่ยว)
-    const fVer = document.getElementById('footer-version');
     const fCred = document.getElementById('footer-credit');
-    
-    checkAdminAccess();
+    if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
+
+    checkAdminAccess(); 
 
     onAuthStateChanged(auth, async (user) => {
         const loginSection = document.getElementById('login-section');
@@ -96,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.getElementById('app-footer');
         const userDisplay = document.getElementById('user-display');
         const settingLink = document.querySelector('.setting-link');
+        const fVer = document.getElementById('footer-version');
 
         if (user) {
             loginSection.style.display = 'none';
@@ -104,7 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
-            // แสดง Version และปุ่ม Admin
             let versionText = APP_INFO.version;
             if (user.email === ADMIN_EMAIL) {
                 versionText += " (Super Admin)";
@@ -113,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(settingLink) settingLink.style.display = 'none';
             }
             if(fVer) fVer.innerText = versionText;
-            if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
             recordsCol = collection(db, "users", user.uid, "records");
             await loadMasterData();
@@ -213,17 +208,20 @@ function setupAuthListeners() {
         });
     }
 
-    const requestDeleteBtn = document.getElementById('btn-request-delete');
-    if (requestDeleteBtn) {
-        requestDeleteBtn.addEventListener('click', async () => {
+    // >>> ลบบัญชีถาวร (Delete Permanently) <<<
+    const deleteAccBtn = document.getElementById('btn-delete-account');
+    if (deleteAccBtn) {
+        deleteAccBtn.addEventListener('click', async () => {
             const confirmMsg = prompt("⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้!\nหากต้องการลบ พิมพ์คำว่า 'DELETE' ในช่องข้างล่าง:");
             
             if (confirmMsg === 'DELETE') {
                 const user = auth.currentUser;
                 if (!user) return;
+
                 try {
-                    requestDeleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบ...';
-                    requestDeleteBtn.disabled = true;
+                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบข้อมูล...';
+                    deleteAccBtn.disabled = true;
+                    
                     if (recordsCol) {
                         const snapshot = await getDocs(recordsCol);
                         if (!snapshot.empty) {
@@ -231,8 +229,10 @@ function setupAuthListeners() {
                             await Promise.all(deletePromises);
                         }
                     }
+
                     await deleteUser(user);
-                    alert("ลบบัญชีเรียบร้อยแล้ว");
+                    alert("ลบบัญชีและข้อมูลทั้งหมดเรียบร้อยแล้ว");
+
                 } catch (error) {
                     console.error("Delete Error:", error);
                     if (error.code === 'auth/requires-recent-login') {
@@ -240,8 +240,8 @@ function setupAuthListeners() {
                     } else {
                         alert("เกิดข้อผิดพลาด: " + error.message);
                     }
-                    requestDeleteBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
-                    requestDeleteBtn.disabled = false;
+                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
+                    deleteAccBtn.disabled = false;
                 }
             }
         });
@@ -267,7 +267,7 @@ function subscribeToFirestore() {
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     unsubscribe = onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        applyFilters(); // เรียกตัวนี้เพื่อแสดงผล
+        applyFilters(); 
     }, (error) => console.error("Data fetch error:", error));
 }
 
@@ -381,7 +381,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export (Fix Footer & Filename) ---
+// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -432,7 +432,7 @@ function setupExportPDF() {
             doc.setFontSize(8); doc.setTextColor(100); 
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                // PDF Footer: เหลือแค่เลขหน้าอย่างเดียว
+                // PDF Footer: เหลือแค่เลขหน้า
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
             
@@ -444,7 +444,6 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            // Filename: my-budget-report_ddmmyyyy-hhmmss.pdf
             const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             doc.save(fileNameStr);
 
@@ -453,7 +452,7 @@ function setupExportPDF() {
     });
 }
 
-// --- Render & Filters (Logic ถูกต้อง: ใช้ filter-start, filter-end) ---
+// --- Render & Filters ---
 window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
@@ -592,7 +591,7 @@ function setupEventListeners() {
     document.getElementById("clear-filter")?.addEventListener("click", ()=>{
         document.getElementById("filter-start").value=""; // Reset Date
         document.getElementById("filter-end").value=""; // Reset Date
-        document.getElementById("filter-category").value="";
+        document.getElementById("filter-month").value=""; document.getElementById("filter-category").value="";
         document.getElementById("filter-method").value=""; if(ft) ft.value=""; applyFilters();
     });
     
