@@ -427,3 +427,17 @@ function setupEventListeners() {
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
+// --- Helper Functions ---
+
+function formatNumber(n) { 
+    return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
+}
+
+function toggleInputState(active, passive) {
+    if (active.value && parseFloat(active.value) > 0) { 
+        passive.value = ""; 
+        passive.disabled = true; 
+    } else { 
+        passive.disabled = false; 
+    }
+}
