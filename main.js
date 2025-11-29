@@ -145,7 +145,7 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
+            const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
             
             doc.save(fileNameStr);
             
@@ -360,3 +360,4 @@ function setupEventListeners() {
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
+
