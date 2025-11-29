@@ -1,7 +1,14 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } 
-from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged,
+    setPersistence,           
+    browserSessionPersistence 
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
@@ -11,12 +18,13 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.8",
+    version: "v1.0.9 (Secure)",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
-const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; // ⚠️ อย่าลืมใส่อีเมล Admin ของคุณตรงนี้
+// ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ
+const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
 // ฟังก์ชันแปลงตัวเลข (ใส่คอมม่า)
 function formatNumber(n) { 
@@ -67,16 +75,21 @@ let unsubscribe = null;
 const auth = getAuth();
 let isRegisterMode = false;
 
+// ตั้งค่าให้ล็อกอินหลุดเมื่อปิด Browser (Session Persistence)
+setPersistence(auth, browserSessionPersistence)
+  .then(() => console.log("Session Persistence: ON"))
+  .catch((error) => console.error("Persistence Error:", error));
+
 // ==========================================
 // >>> 3. การทำงานหลัก (Main Logic) <<<
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject Footer (หน้าเว็บยังคงโชว์เครดิตตามปกติ หรือจะลบออกก็ได้ถ้าต้องการ)
-    const fVer = document.getElementById('footer-version');
+    // Inject Footer Credit
     const fCred = document.getElementById('footer-credit');
-    
-    checkAdminAccess(); 
+    if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
+
+    checkAdminAccess(); // เช็กสิทธิ์ถ้าอยู่หน้า manage.html
 
     // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
@@ -85,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.getElementById('app-footer');
         const userDisplay = document.getElementById('user-display');
         const settingLink = document.querySelector('.setting-link');
+        const fVer = document.getElementById('footer-version');
 
         if (user) {
             loginSection.style.display = 'none';
@@ -93,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
-            // Version Logic for Web Footer
+            // Version & Admin Button Logic
             let versionText = APP_INFO.version;
             if (user.email === ADMIN_EMAIL) {
                 versionText += " (Super Admin)";
@@ -102,10 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(settingLink) settingLink.style.display = 'none';
             }
             if(fVer) fVer.innerText = versionText;
-            if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
+            // Load Data
             recordsCol = collection(db, "users", user.uid, "records");
-
             await loadMasterData();
             const dateInput = document.getElementById('date');
             if(dateInput) dateInput.valueAsDate = new Date();
@@ -131,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
+// ฟังก์ชันป้องกันหน้า Admin
 function checkAdminAccess() {
     if (window.location.pathname.includes("manage.html")) {
         onAuthStateChanged(auth, (user) => {
@@ -367,7 +381,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export (Clean Footer + Custom Filename) ---
+// --- PDF Export (Updated Filename & Clean Footer) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -418,8 +432,7 @@ function setupExportPDF() {
             doc.setFontSize(8); doc.setTextColor(100); 
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                // >>> ส่วนที่แก้ไข: ลบ Version และ Credit ออก <<<
-                // เหลือแค่เลขหน้า
+                // >>> ส่วน Footer (เหลือแค่เลขหน้า) <<<
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
             
@@ -431,7 +444,7 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            // >>> ส่วนที่แก้ไข: เปลี่ยน _ เป็น - คั่นระหว่างวันที่และเวลา <<<
+            // >>> Filename Format: my-budget-report_ddmmyyyy-hhmmss.pdf <<<
             const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             doc.save(fileNameStr);
 
