@@ -116,10 +116,11 @@
     .btn-main:hover { background: #4f46e5; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3); }
     .btn-sec { background: #fff; border: 2px solid #f1f5f9; color: #64748b; padding: 14px; border-radius: 14px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
     .btn-sec:hover { background: #f8fafc; border-color: #cbd5e1; }
+    
+    /* ปุ่ม Logout & Delete */
     .btn-logout { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 8px 16px; border-radius: 50px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
     .btn-logout:hover { background: #fecaca; }
 
-    /* >>> Table & Toolbar Adjusted <<< */
     .table-card { background: #fff; border-radius: 24px; border: 1px solid #f1f5f9; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05); overflow: hidden; height: 100%; display: flex; flex-direction: column; }
     
     .table-toolbar { 
@@ -141,7 +142,6 @@
         flex: 1; 
     }
     
-    /* บังคับความสูงและขนาด Input ให้เท่ากัน */
     .dropdown-filter { 
         padding: 8px 12px; 
         border-radius: 10px; 
@@ -149,14 +149,11 @@
         font-size: 13px; 
         background: #fff; 
         font-weight: 500;
-        height: 40px; /* สูงเท่ากันทุกช่อง */
+        height: 40px; 
         box-sizing: border-box;
     }
     
-    /* ปรับช่องวันที่ให้เล็กลงหน่อยจะได้ไม่กินที่ */
-    input[type="date"].dropdown-filter {
-        width: 140px; 
-    }
+    input[type="date"].dropdown-filter { width: 140px; }
 
     .btn-pdf { background: #ef4444; color: #fff; border: none; padding: 0 20px; height: 40px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
     .btn-pdf:hover { background: #dc2626; transform: translateY(-2px); }
@@ -232,8 +229,8 @@
 
         <div style="width:1px; height:30px; background:#e2e8f0; margin:0 10px;"></div>
         
-        <button id="btn-request-delete" style="background:#fff; color:#f59e0b; border:1px solid #fcd34d; padding:8px 16px; border-radius:50px; font-size:12px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#fffbeb'" onmouseout="this.style.background='#fff'">
-            <i class="fa-solid fa-triangle-exclamation"></i> แจ้งลบบัญชี
+        <button id="btn-delete-account" style="background:#fff; color:#ef4444; border:1px solid #fee2e2; padding:8px 16px; border-radius:50px; font-size:12px; font-weight:700; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='#fff'">
+            <i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร
         </button>
 
         <button id="btn-logout" class="btn-logout" style="margin-left: 5px;"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
