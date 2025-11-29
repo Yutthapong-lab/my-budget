@@ -1,4 +1,4 @@
-// --- main.js (v1.1.8 - Fix Syntax Error) ---
+// --- main.js (v1.1.9 - Delete by Email Confirmation) ---
 import { db } from "./firebase-config.js";
 
 import { 
@@ -24,7 +24,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.8", // Fixed Version
+    version: "v1.1.9", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             recordsCol = collection(db, "users", user.uid, "records");
             await loadMasterData();
-            setCurrentDate(); // ตั้งวันที่ปัจจุบัน (Local)
+            setCurrentDate(); 
             
             subscribeToFirestore();
             startClock();
@@ -284,13 +284,17 @@ function setupAuthListeners() {
         });
     }
 
+    // >>> [UPDATE] Delete Account with Email Confirmation <<<
     const deleteAccBtn = document.getElementById('btn-delete-account');
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
-            const confirmMsg = prompt("⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้!\nหากต้องการลบ พิมพ์คำว่า 'DELETE' ในช่องข้างล่าง:");
-            if (confirmMsg === 'DELETE') {
-                const user = auth.currentUser;
-                if (!user) return;
+            const user = auth.currentUser;
+            if (!user) return;
+
+            const confirmMsg = prompt(`⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้!\n\nหากยืนยันจะลบ กรุณาพิมพ์อีเมลของท่าน:\n👉 ${user.email} \n\nลงในช่องข้างล่าง:`);
+            
+            // เช็คว่าพิมพ์อีเมลตรงไหม
+            if (confirmMsg === user.email) {
                 try {
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบ...';
                     deleteAccBtn.disabled = true;
@@ -317,6 +321,8 @@ function setupAuthListeners() {
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
                     deleteAccBtn.disabled = false;
                 }
+            } else if (confirmMsg !== null) {
+                alert("⛔ อีเมลไม่ถูกต้อง การลบถูกยกเลิก");
             }
         });
     }
@@ -365,7 +371,6 @@ window.editRecord = function(id) {
     const rec = allRecords.find(r => r.id === id);
     if (!rec) return;
     
-    // ตั้งวันที่ตามข้อมูล
     document.getElementById("date").value = rec.date; 
     document.getElementById("item").value = rec.item;
     selectedCategories = Array.isArray(rec.category) ? rec.category : [rec.category];
