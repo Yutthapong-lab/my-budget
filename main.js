@@ -6,12 +6,53 @@ import {
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// Config กลาง
+// ==========================================
+// >>> 1. ส่วนตั้งค่าและฟังก์ชันช่วย (Helper) <<<
+// ==========================================
+
 const APP_INFO = {
-    version: "v1.0.0",
+    version: "v1.0.1 (Fixed)",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
+
+// ฟังก์ชันแปลงตัวเลข (ใส่คอมม่า) - ย้ายมาไว้บนสุดกันหาไม่เจอ
+function formatNumber(n) { 
+    if (n === undefined || n === null || isNaN(n)) return "0.00";
+    return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
+}
+
+// ฟังก์ชันแปลงวันที่ไทย
+function formatThaiDate(dateString) {
+    if (!dateString) return "-";
+    try {
+        const [y, m, d] = dateString.split('-');
+        const thaiYear = parseInt(y) + 543;
+        return `${d}/${m}/${thaiYear}`;
+    } catch(e) { return dateString; }
+}
+
+// ฟังก์ชันเลือกสีหมวดหมู่ (แบบปลอดภัย ไม่พังแม้ชื่อว่าง)
+function getColorForCategory(name) {
+    const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
+    if (!name || typeof name !== 'string') return palettes[0];
+    const charCode = name.charCodeAt(0) || 0;
+    return palettes[charCode % palettes.length] || palettes[0];
+}
+
+// ฟังก์ชันสลับสถานะช่องกรอกเงิน
+function toggleInputState(active, passive) {
+    if (active.value && parseFloat(active.value) > 0) { 
+        passive.value = ""; 
+        passive.disabled = true; 
+    } else { 
+        passive.disabled = false; 
+    }
+}
+
+// ==========================================
+// >>> 2. ตัวแปรระบบ <<<
+// ==========================================
 
 let allRecords = [];
 let filteredRecords = [];
@@ -19,10 +60,13 @@ let currentPage = 1;
 let editingId = null;
 let selectedCategories = [];
 let masterCategories = [];
-let recordsCol = null; // Collection ส่วนตัว
+let recordsCol = null;
 let unsubscribe = null;
-
 const auth = getAuth();
+
+// ==========================================
+// >>> 3. การทำงานหลัก (Main Logic) <<<
+// ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inject Footer
@@ -31,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(fVer) fVer.innerText = APP_INFO.version;
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
-    // Auth State Listener
+    // ตรวจสอบ Login
     onAuthStateChanged(auth, async (user) => {
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
@@ -42,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dashboardSection.style.display = 'flex';
             footer.style.display = 'flex';
             
-            // Set Path เป็นห้องส่วนตัว
+            // ชี้เป้าไปที่ห้องส่วนตัวของ User
             recordsCol = collection(db, "users", user.uid, "records");
 
             await loadMasterData();
@@ -68,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// --- Auth ---
+// --- Auth System ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -95,7 +139,7 @@ function setupAuthListeners() {
     }
 }
 
-// --- Data Logic ---
+// --- Data Management ---
 function subscribeToFirestore() {
     if (!recordsCol) return;
     if (unsubscribe) unsubscribe();
@@ -217,6 +261,7 @@ function fetchWeather() {
     }
 }
 
+// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -298,6 +343,7 @@ function applyFilters() {
     currentPage = 1; renderList(); updateSummary();
 }
 
+// >>> ส่วนแสดงผลที่ปรับปรุงให้แข็งแกร่ง <<<
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
@@ -319,45 +365,52 @@ function renderList() {
     }
 
     displayItems.forEach(r => {
-        const thaiDate = formatThaiDate(r.date) || "-";
-        let timeStr = "";
-        try { if(r.createdAt && r.createdAt.seconds) timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น."; } catch(e){}
+        // ใช้ Try-Catch กันจอขาวถ้าข้อมูลบรรทัดไหนพัง
+        try {
+            const thaiDate = formatThaiDate(r.date) || "-";
+            let timeStr = "";
+            try { if(r.createdAt && r.createdAt.seconds) timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น."; } catch(e){}
 
-        const itemText = r.item || "ไม่มีชื่อ";
-        const incomeNum = parseFloat(r.income) || 0;
-        const expenseNum = parseFloat(r.expense) || 0;
-        const incVal = incomeNum > 0 ? `+${formatNumber(incomeNum)}` : "-";
-        const expVal = expenseNum > 0 ? `-${formatNumber(expenseNum)}` : "-";
-        const cats = Array.isArray(r.category) ? r.category : [r.category || "ทั่วไป"];
-        const catHtml = cats.map(c => {
-            const col = getColorForCategory(c);
-            return `<span class="tag-badge" style="background:${col.bg}; color:${col.text};"><i class="fa-solid fa-tag" style="font-size:10px;"></i> ${c}</span>`;
-        }).join("");
+            const itemText = r.item || "ไม่มีชื่อ";
+            const incomeNum = parseFloat(r.income) || 0;
+            const expenseNum = parseFloat(r.expense) || 0;
+            const incVal = incomeNum > 0 ? `+${formatNumber(incomeNum)}` : "-";
+            const expVal = expenseNum > 0 ? `-${formatNumber(expenseNum)}` : "-";
+            
+            // กัน Error กรณีหมวดหมู่เป็น Null
+            const cats = Array.isArray(r.category) ? r.category : [r.category || "ทั่วไป"];
+            const catHtml = cats.map(c => {
+                const col = getColorForCategory(c);
+                return `<span class="tag-badge" style="background:${col.bg}; color:${col.text};"><i class="fa-solid fa-tag" style="font-size:10px;"></i> ${c}</span>`;
+            }).join("");
 
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td style="text-align:center;">
-                <div style="font-weight:600;">${thaiDate}</div>
-                <div style="font-size:12px; color:#94a3b8;">${timeStr}</div>
-            </td>
-            <td>
-                <div style="font-weight:600; color:#334155;">${itemText}</div>
-                <div style="font-size:12px; color:#94a3b8;">${r.note || ""}</div>
-            </td>
-            <td style="text-align:right; color:#059669; font-weight:700;">${incVal}</td>
-            <td style="text-align:right; color:#e11d48; font-weight:700;">${expVal}</td>
-            <td style="text-align:center;">${catHtml}</td>
-            <td style="text-align:center;">
-               <span class="method-pill"><i class="fa-solid fa-credit-card" style="font-size:10px; color:#64748b;"></i> ${r.method || "-"}</span>
-            </td>
-            <td style="text-align:center;">
-               <div style="display:flex; gap:6px; justify-content:center;">
-                   <button style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.editRecord('${r.id}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
-                   <button style="background:#fef2f2; color:#b91c1c; border:1px solid #fee2e2; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.deleteRecord('${r.id}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
-               </div>
-            </td>
-        `;
-        container.appendChild(tr);
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td style="text-align:center;">
+                    <div style="font-weight:600;">${thaiDate}</div>
+                    <div style="font-size:12px; color:#94a3b8;">${timeStr}</div>
+                </td>
+                <td>
+                    <div style="font-weight:600; color:#334155;">${itemText}</div>
+                    <div style="font-size:12px; color:#94a3b8;">${r.note || ""}</div>
+                </td>
+                <td style="text-align:right; color:#059669; font-weight:700;">${incVal}</td>
+                <td style="text-align:right; color:#e11d48; font-weight:700;">${expVal}</td>
+                <td style="text-align:center;">${catHtml}</td>
+                <td style="text-align:center;">
+                <span class="method-pill"><i class="fa-solid fa-credit-card" style="font-size:10px; color:#64748b;"></i> ${r.method || "-"}</span>
+                </td>
+                <td style="text-align:center;">
+                <div style="display:flex; gap:6px; justify-content:center;">
+                    <button style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.editRecord('${r.id}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                    <button style="background:#fef2f2; color:#b91c1c; border:1px solid #fee2e2; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.deleteRecord('${r.id}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                </td>
+            `;
+            container.appendChild(tr);
+        } catch (rowErr) {
+            console.error("Error rendering row:", rowErr);
+        }
     });
     
     const paginationEl = document.getElementById("pagination-controls");
@@ -369,25 +422,15 @@ function renderList() {
     }
 }
 
-// --- Helpers (RESTORED HERE) ---
-function formatNumber(n) { 
-    return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
-}
-
-function formatThaiDate(dateString) {
-    if (!dateString) return "-";
-    const [y, m, d] = dateString.split('-');
-    const thaiYear = parseInt(y) + 543;
-    return `${d}/${m}/${thaiYear}`;
-}
-
-function toggleInputState(active, passive) {
-    if (active.value && parseFloat(active.value) > 0) { 
-        passive.value = ""; 
-        passive.disabled = true; 
-    } else { 
-        passive.disabled = false; 
-    }
+function updateSummary() {
+    const inc = filteredRecords.reduce((s,r)=>s+(parseFloat(r.income)||0),0);
+    const exp = filteredRecords.reduce((s,r)=>s+(parseFloat(r.expense)||0),0);
+    document.getElementById("sum-income").innerText = formatNumber(inc);
+    document.getElementById("sum-expense").innerText = formatNumber(exp);
+    const net = inc - exp;
+    const netEl = document.getElementById("sum-net");
+    netEl.innerText = formatNumber(net);
+    netEl.style.color = net >= 0 ? '#0284c7' : '#e11d48'; // สีฟ้า/แดง ตาม CSS ใหม่
 }
 
 function setupEventListeners() {
