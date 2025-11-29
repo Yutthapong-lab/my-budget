@@ -56,7 +56,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export Logic (Stable Version) ---
+// --- PDF Export Logic (With Total Count) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -102,6 +102,9 @@ function setupExportPDF() {
             
             doc.setFontSize(10); 
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
+            
+            // >>> เพิ่มบรรทัดแสดงจำนวนรายการทั้งหมดใน PDF <<<
+            doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
             const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
             const tableRows = filteredRecords.map(r => [
@@ -116,7 +119,7 @@ function setupExportPDF() {
             doc.autoTable({ 
                 head: [tableColumn], 
                 body: tableRows, 
-                startY: 35,
+                startY: 40, // ขยับตารางลงนิดหน่อย เพื่อให้ไม่ทับ Text ด้านบน
                 styles: { 
                     font: 'Sarabun', 
                     fontStyle: 'normal' 
@@ -128,7 +131,7 @@ function setupExportPDF() {
             });
 
             const d = new Date();
-            const fileNameStr = `my-budget-report_${d.getDate()}_${d.getHours()}${d.getMinutes()}.pdf`;
+            const fileNameStr = `my-budget_${d.getDate()}_${d.getHours()}${d.getMinutes()}.pdf`;
             doc.save(fileNameStr);
             
         } catch (err) {
@@ -237,12 +240,15 @@ function applyFilters() {
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
-    // แก้ไข: เปลี่ยน Fallback จาก 5 เป็น 10
     const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1; if (currentPage > totalPages) currentPage = totalPages;
 
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    // >>> อัปเดตจำนวนรายการทั้งหมดตรงนี้ <<<
+    const totalCountEl = document.getElementById("total-count");
+    if(totalCountEl) totalCountEl.innerText = filteredRecords.length;
 
     if(displayItems.length === 0) {
         container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;"><i class="fa-solid fa-inbox" style="font-size:24px; margin-bottom:8px;"></i><br>- ไม่พบข้อมูล -</td></tr>`;
