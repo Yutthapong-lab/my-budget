@@ -31,7 +31,8 @@ function startClock() {
         const now = new Date();
         const timeEl = document.getElementById('clock-display');
         const dateEl = document.getElementById('date-display');
-        if(timeEl) timeEl.innerText = now.toLocaleTimeString('th-TH', { hour12: false });
+        // เพิ่มไอคอนหน้าเวลา
+        if(timeEl) timeEl.innerHTML = `<i class="fa-regular fa-clock"></i> ${now.toLocaleTimeString('th-TH', { hour12: false })}`;
         if(dateEl) dateEl.innerText = now.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
     };
     updateTime(); setInterval(updateTime, 1000);
@@ -121,12 +122,12 @@ window.editRecord = function(id) {
     document.getElementById("note").value = rec.note || "";
     editingId = id;
     const btn = document.querySelector("#entry-form button[type='submit']");
-    btn.innerHTML = 'บันทึกการแก้ไข'; btn.classList.add("edit-mode");
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> บันทึกการแก้ไข'; btn.classList.add("edit-mode");
 }
 
 function resetSubmitButton() {
     const btn = document.querySelector("#entry-form button[type='submit']");
-    btn.innerHTML = 'บันทึกข้อมูล'; btn.classList.remove("edit-mode");
+    btn.innerHTML = '<i class="fa-solid fa-save"></i> บันทึกข้อมูล'; btn.classList.remove("edit-mode");
 }
 
 async function loadMasterData() {
@@ -147,8 +148,9 @@ async function loadMasterData() {
 function renderCategoryChips() {
     const c = document.getElementById("category-container"); c.innerHTML = "";
     masterCategories.forEach(cat => {
-        const btn = document.createElement("div"); btn.className = "cat-chip-btn"; btn.textContent = cat;
-        if (selectedCategories.includes(cat)) { btn.classList.add("active"); btn.textContent = `✓ ${cat}`; }
+        const btn = document.createElement("div"); btn.className = "cat-chip-btn"; 
+        btn.innerHTML = cat;
+        if (selectedCategories.includes(cat)) { btn.classList.add("active"); btn.innerHTML = `<i class="fa-solid fa-check"></i> ${cat}`; }
         btn.onclick = () => { selectedCategories.includes(cat) ? selectedCategories=selectedCategories.filter(x=>x!==cat) : selectedCategories.push(cat); renderCategoryChips(); };
         c.appendChild(btn);
     });
@@ -175,7 +177,6 @@ function applyFilters() {
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
-    // ปรับ Fallback เป็น 5 เพื่อให้สอดคล้องกับ UI
     const pageSize = parseInt(document.getElementById("page-size")?.value || 5);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1; if (currentPage > totalPages) currentPage = totalPages;
@@ -183,7 +184,7 @@ function renderList() {
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     if(displayItems.length === 0) {
-        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;">- ไม่พบข้อมูล -</td></tr>`;
+        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;"><i class="fa-solid fa-inbox" style="font-size:24px; margin-bottom:8px;"></i><br>- ไม่พบข้อมูล -</td></tr>`;
         return;
     }
 
@@ -192,7 +193,7 @@ function renderList() {
         const cats = Array.isArray(r.category) ? r.category : [r.category];
         const catHtml = cats.map(c => {
             const col = getColorForCategory(c);
-            return `<span class="tag-badge" style="background:${col.bg}; color:${col.text};">${c}</span>`;
+            return `<span class="tag-badge" style="background:${col.bg}; color:${col.text};"><i class="fa-solid fa-tag" style="font-size:10px;"></i> ${c}</span>`;
         }).join("");
         const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "-";
         const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "-";
@@ -211,12 +212,12 @@ function renderList() {
             <td style="text-align:right; color:#dc2626; font-weight:700;">${expVal}</td>
             <td style="text-align:center;">${catHtml}</td>
             <td style="text-align:center;">
-               <span class="method-pill">${r.method}</span>
+               <span class="method-pill"><i class="fa-solid fa-credit-card" style="font-size:10px; color:#64748b;"></i> ${r.method}</span>
             </td>
             <td style="text-align:center;">
                <div style="display:flex; gap:6px; justify-content:center;">
-                   <button style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; padding:4px 8px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.editRecord('${r.id}')">แก้ไข</button>
-                   <button style="background:#fef2f2; color:#b91c1c; border:1px solid #fee2e2; padding:4px 8px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.deleteRecord('${r.id}')">ลบ</button>
+                   <button style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.editRecord('${r.id}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                   <button style="background:#fef2f2; color:#b91c1c; border:1px solid #fee2e2; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.deleteRecord('${r.id}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
                </div>
             </td>
         `;
@@ -224,9 +225,9 @@ function renderList() {
     });
     
     document.getElementById("pagination-controls").innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;">&lt;</button>
+        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-left"></i></button>
         <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;">&gt;</button>`;
+        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-right"></i></button>`;
 }
 
 function updateSummary() {
