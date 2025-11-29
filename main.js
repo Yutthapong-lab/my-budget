@@ -1,7 +1,6 @@
-// --- main.js (v1.1.6 - Clear Email after Reset) ---
+// --- main.js (v1.1.7 - Fix Local Date) ---
 import { db } from "./firebase-config.js";
 
-// ⚠️ Import ตัวเดิมให้ครบ
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
@@ -25,12 +24,26 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.6", // Update Version
+    version: "v1.1.7", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
+
+// ฟังก์ชันตั้งวันที่เป็นปัจจุบัน (ตามเวลาเครื่อง)
+function setCurrentDate() {
+    const dateInput = document.getElementById("date");
+    if (dateInput) {
+        const now = new Date();
+        // ดึง ปี-เดือน-วัน ตามเวลาท้องถิ่น
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        // กำหนดค่าแบบ String (YYYY-MM-DD) แทน valueAsDate
+        dateInput.value = `${year}-${month}-${day}`;
+    }
+}
 
 function resetEyeView() {
     const passInput = document.getElementById('login-pass');
@@ -126,8 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             recordsCol = collection(db, "users", user.uid, "records");
             await loadMasterData();
-            const dateInput = document.getElementById('date');
-            if(dateInput) dateInput.valueAsDate = new Date();
+            
+            // >>> [UPDATE] เรียกฟังก์ชันตั้งวันที่ใหม่ <<<
+            setCurrentDate();
             
             subscribeToFirestore();
             startClock();
@@ -177,7 +191,6 @@ function setupAuthListeners() {
     const emailInput = document.getElementById('login-email');
     const passInput = document.getElementById('login-pass');
 
-    // ปุ่ม Reset (ยางลบ)
     const btnResetLogin = document.getElementById('btn-reset-login');
     if (btnResetLogin) {
         btnResetLogin.addEventListener('click', () => {
@@ -189,7 +202,6 @@ function setupAuthListeners() {
         });
     }
 
-    // ปุ่มลืมรหัสผ่าน
     const btnForgot = document.getElementById('btn-forgot-pass');
     if (btnForgot) {
         btnForgot.addEventListener('click', async () => {
@@ -202,7 +214,6 @@ function setupAuthListeners() {
             if(confirm(`ต้องการส่งลิงก์รีเซ็ตรหัสผ่านไปยัง: ${email} ใช่หรือไม่?`)) {
                 try {
                     await sendPasswordResetEmail(auth, email);
-                    // >>> [UPDATE] เคลียร์อีเมลหลังส่งสำเร็จ <<<
                     emailInput.value = ""; 
                     alert(`✅ ส่งลิงก์เรียบร้อยแล้ว!\nกรุณาตรวจสอบ Email (รวมถึงใน Junk/Spam)\nเพื่อตั้งรหัสผ่านใหม่ครับ`);
                 } catch (error) {
@@ -216,7 +227,6 @@ function setupAuthListeners() {
         });
     }
 
-    // สลับโหมด
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             isRegisterMode = !isRegisterMode; 
@@ -269,7 +279,6 @@ function setupAuthListeners() {
         });
     }
 
-    // Logout
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -279,7 +288,6 @@ function setupAuthListeners() {
         });
     }
 
-    // Delete Account
     const deleteAccBtn = document.getElementById('btn-delete-account');
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
@@ -317,7 +325,6 @@ function setupAuthListeners() {
         });
     }
 
-    // Eye View
     const togglePassword = document.getElementById('toggle-password');
     if (togglePassword && passInput) {
         togglePassword.addEventListener('click', function () {
@@ -585,98 +592,4 @@ function renderList() {
                     <div style="font-size:12px; color:#94a3b8;">${timeStr}</div>
                 </td>
                 <td>
-                    <div style="font-weight:600; color:#334155;">${itemText}</div>
-                    <div style="font-size:12px; color:#94a3b8;">${r.note || ""}</div>
-                </td>
-                <td style="text-align:right; color:#059669; font-weight:700;">${incVal}</td>
-                <td style="text-align:right; color:#e11d48; font-weight:700;">${expVal}</td>
-                <td style="text-align:center;">${catHtml}</td>
-                <td style="text-align:center;">
-                <span class="method-pill"><i class="fa-solid fa-credit-card" style="font-size:10px; color:#64748b;"></i> ${r.method || "-"}</span>
-                </td>
-                <td style="text-align:center;">
-                <div style="display:flex; gap:6px; justify-content:center;">
-                    <button style="background:#fff7ed; color:#ea580c; border:1px solid #ffedd5; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.editRecord('${r.id}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
-                    <button style="background:#fef2f2; color:#b91c1c; border:1px solid #fee2e2; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;" onclick="window.deleteRecord('${r.id}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                </td>
-            `;
-            container.appendChild(tr);
-        } catch (rowErr) {
-            console.error("Error rendering row:", rowErr);
-        }
-    });
-    
-    const paginationEl = document.getElementById("pagination-controls");
-    if(paginationEl) {
-        paginationEl.innerHTML = `
-            <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-left"></i></button>
-            <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
-            <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-right"></i></button>`;
-    }
-}
-
-function updateSummary() {
-    const inc = filteredRecords.reduce((s,r)=>s+(parseFloat(r.income)||0),0);
-    const exp = filteredRecords.reduce((s,r)=>s+(parseFloat(r.expense)||0),0);
-    document.getElementById("sum-income").innerText = formatNumber(inc);
-    document.getElementById("sum-expense").innerText = formatNumber(exp);
-    const net = inc - exp;
-    const netEl = document.getElementById("sum-net");
-    netEl.innerText = formatNumber(net);
-    netEl.style.color = net >= 0 ? '#0284c7' : '#e11d48';
-}
-
-function setupEventListeners() {
-    const form = document.getElementById("entry-form");
-    const inc = document.getElementById("income"), exp = document.getElementById("expense");
-    if(form) {
-        inc.addEventListener("input", ()=>toggleInputState(inc, exp));
-        exp.addEventListener("input", ()=>toggleInputState(exp, inc));
-        form.addEventListener("submit", (e)=>{
-            e.preventDefault();
-            if(selectedCategories.length===0){ alert("เลือกหมวดหมู่ก่อนครับ"); return; }
-            const incomeVal = parseFloat(inc.value) || 0;
-            const expenseVal = parseFloat(exp.value) || 0;
-            const currentTotalIncome = allRecords.reduce((sum, r) => sum + (Number(r.income) || 0), 0);
-            
-            if (expenseVal > 0 && currentTotalIncome <= 0) {
-                alert("⚠️ ไม่สามารถบันทึกรายจ่ายได้ เนื่องจากยอดรายรับรวมยังเป็น 0 ครับ \nกรุณาบันทึกรายรับก่อนครับ");
-                form.reset(); 
-                return;
-            }
-
-            saveRecord({
-                date: document.getElementById("date").value, item: document.getElementById("item").value,
-                category: selectedCategories, method: document.getElementById("method").value,
-                income: incomeVal, expense: expenseVal, note: document.getElementById("note").value
-            });
-            form.reset(); selectedCategories=[]; renderCategoryChips(); 
-            document.getElementById("date").valueAsDate=new Date(); inc.disabled=false; exp.disabled=false;
-        });
-        
-        form.addEventListener("reset", ()=>{ 
-            editingId=null; resetSubmitButton(); 
-            setTimeout(()=>{ 
-                inc.disabled=false; 
-                exp.disabled=false; 
-                selectedCategories=[]; 
-                renderCategoryChips(); 
-                document.getElementById("date").valueAsDate=new Date(); 
-            },0); 
-        });
-    }
-    const ft = document.getElementById("filter-text");
-    if(ft) ft.addEventListener("input", applyFilters);
-    document.querySelectorAll(".dropdown-filter").forEach(e=>e.addEventListener("change", applyFilters));
-    document.getElementById("clear-filter")?.addEventListener("click", ()=>{
-        document.getElementById("filter-start").value="";
-        document.getElementById("filter-end").value="";
-        document.getElementById("filter-category").value="";
-        document.getElementById("filter-method").value=""; if(ft) ft.value=""; applyFilters();
-    });
-    document.getElementById("filter-start")?.addEventListener("change", applyFilters);
-    document.getElementById("filter-end")?.addEventListener("change", applyFilters);
-    
-    document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
-}
+                    <div style="font-weight:600;
