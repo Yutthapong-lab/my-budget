@@ -119,11 +119,46 @@
     .btn-logout { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 8px 16px; border-radius: 50px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s; }
     .btn-logout:hover { background: #fecaca; }
 
+    /* >>> Table & Toolbar Adjusted <<< */
     .table-card { background: #fff; border-radius: 24px; border: 1px solid #f1f5f9; box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05); overflow: hidden; height: 100%; display: flex; flex-direction: column; }
-    .table-toolbar { padding: 25px; background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-    .filter-group { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; }
-    .dropdown-filter { padding: 10px 16px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 13px; background: #fff; font-weight: 500; }
-    .btn-pdf { background: #ef4444; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
+    
+    .table-toolbar { 
+        padding: 20px; 
+        background: #fff; 
+        border-bottom: 1px solid #f1f5f9; 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        flex-wrap: wrap; 
+        gap: 15px; 
+    }
+    
+    .filter-group { 
+        display: flex; 
+        align-items: center; 
+        gap: 8px; 
+        flex-wrap: wrap; 
+        flex: 1; 
+    }
+    
+    /* บังคับความสูงและขนาด Input ให้เท่ากัน */
+    .dropdown-filter { 
+        padding: 8px 12px; 
+        border-radius: 10px; 
+        border: 1px solid #e2e8f0; 
+        font-size: 13px; 
+        background: #fff; 
+        font-weight: 500;
+        height: 40px; /* สูงเท่ากันทุกช่อง */
+        box-sizing: border-box;
+    }
+    
+    /* ปรับช่องวันที่ให้เล็กลงหน่อยจะได้ไม่กินที่ */
+    input[type="date"].dropdown-filter {
+        width: 140px; 
+    }
+
+    .btn-pdf { background: #ef4444; color: #fff; border: none; padding: 0 20px; height: 40px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
     .btn-pdf:hover { background: #dc2626; transform: translateY(-2px); }
 
     .table-wrapper { overflow: auto; flex: 1; }
@@ -293,7 +328,7 @@
                         <select id="filter-category" class="dropdown-filter"></select>
                         <select id="filter-method" class="dropdown-filter"></select>
                         <div style="position:relative; flex:1; min-width:150px;">
-                            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:13px; color:#94a3b8; font-size:13px;"></i>
+                            <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:12px; top:11px; color:#94a3b8; font-size:13px;"></i>
                             <input type="text" id="filter-text" class="dropdown-filter" style="width:100%; padding-left:35px;" placeholder="ค้นหา...">
                         </div>
                         <button id="clear-filter" class="dropdown-filter" style="cursor:pointer; background:#f1f5f9;"><i class="fa-solid fa-filter-circle-xmark"></i> รีเซ็ต</button>
