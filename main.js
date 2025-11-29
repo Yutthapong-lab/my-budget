@@ -1,14 +1,7 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
-import { 
-    getAuth, 
-    signInWithEmailAndPassword, 
-    createUserWithEmailAndPassword, 
-    signOut, 
-    onAuthStateChanged,
-    setPersistence,           
-    browserSessionPersistence 
-} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } 
+from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
@@ -18,7 +11,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.9 (Secure)",
+    version: "v1.0.9", // <<< แก้ตรงนี้: ลบ (Secure) ออก ให้เหลือแค่เลขเวอร์ชัน
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -75,7 +68,7 @@ let unsubscribe = null;
 const auth = getAuth();
 let isRegisterMode = false;
 
-// ตั้งค่าให้ล็อกอินหลุดเมื่อปิด Browser (Session Persistence)
+// ตั้งค่า Session Persistence (ปิดเว็บ = Logout)
 setPersistence(auth, browserSessionPersistence)
   .then(() => console.log("Session Persistence: ON"))
   .catch((error) => console.error("Persistence Error:", error));
@@ -89,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fCred = document.getElementById('footer-credit');
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
-    checkAdminAccess(); // เช็กสิทธิ์ถ้าอยู่หน้า manage.html
+    checkAdminAccess(); 
 
     // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
@@ -107,12 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
-            // Version & Admin Button Logic
+            // >>> Logic แสดง Version <<<
             let versionText = APP_INFO.version;
+            // ถ้าเป็น Admin ให้เติม (Super Admin) ต่อท้าย
             if (user.email === ADMIN_EMAIL) {
                 versionText += " (Super Admin)";
                 if(settingLink) settingLink.style.display = 'flex';
             } else {
+                // ถ้าเป็น User ทั่วไป แสดงแค่ v1.0.9 เฉยๆ
                 if(settingLink) settingLink.style.display = 'none';
             }
             if(fVer) fVer.innerText = versionText;
@@ -144,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// ฟังก์ชันป้องกันหน้า Admin
 function checkAdminAccess() {
     if (window.location.pathname.includes("manage.html")) {
         onAuthStateChanged(auth, (user) => {
@@ -381,7 +375,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export (Updated Filename & Clean Footer) ---
+// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -432,7 +426,7 @@ function setupExportPDF() {
             doc.setFontSize(8); doc.setTextColor(100); 
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                // >>> ส่วน Footer (เหลือแค่เลขหน้า) <<<
+                // Footer: Show only page number in PDF
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
             
@@ -444,7 +438,7 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            // >>> Filename Format: my-budget-report_ddmmyyyy-hhmmss.pdf <<<
+            // Format: my-budget-report_ddmmyyyy-hhmmss.pdf
             const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             doc.save(fileNameStr);
 
