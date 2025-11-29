@@ -23,7 +23,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.1", // Update Version
+    version: "v1.1.2", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allRecords = [];
             recordsCol = null;
 
-            // >>> [UPDATE 1] สั่งล้างช่อง Input ทุกครั้งที่สถานะเป็น Logout (หรือถูกลบบัญชี) <<<
+            // สั่งล้างช่อง Input ทุกครั้งที่สถานะเป็น Logout
             if(document.getElementById('login-email')) document.getElementById('login-email').value = "";
             if(document.getElementById('login-pass')) document.getElementById('login-pass').value = "";
             if(document.getElementById('login-error')) document.getElementById('login-error').innerText = "";
@@ -174,14 +174,14 @@ function setupAuthListeners() {
     const emailInput = document.getElementById('login-email');
     const passInput = document.getElementById('login-pass');
 
-    // >>> [UPDATE 2] ฟังก์ชันปุ่ม Reset <<<
+    // ฟังก์ชันปุ่ม Reset
     const btnResetLogin = document.getElementById('btn-reset-login');
     if (btnResetLogin) {
         btnResetLogin.addEventListener('click', () => {
             emailInput.value = "";
             passInput.value = "";
             errDiv.innerText = "";
-            emailInput.focus(); // ให้เคอร์เซอร์กลับไปรอที่ช่องอีเมล
+            emailInput.focus();
         });
     }
 
@@ -194,6 +194,16 @@ function setupAuthListeners() {
             // ล้างค่า
             emailInput.value = "";
             passInput.value = "";
+
+            // >>> [UPDATE 3] Reset Eye View เมื่อสลับโหมด <<<
+            // บังคับให้ type กลับเป็น password (ซ่อน)
+            passInput.setAttribute('type', 'password');
+            // รีเซ็ตไอคอนกลับเป็นรูปตาปกติ (fa-eye) เอาขีดฆ่าออก (fa-eye-slash)
+            const toggleIcon = document.getElementById('toggle-password');
+            if (toggleIcon) {
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
 
             if (isRegisterMode) {
                 authTitle.innerText = "สมัครสมาชิกใหม่";
@@ -243,7 +253,6 @@ function setupAuthListeners() {
         logoutBtn.addEventListener('click', () => {
             if(confirm("ออกจากระบบ?")) {
                 signOut(auth).then(() => {
-                    // ไม่ต้องสั่งเคลียร์ตรงนี้ซ้ำ เพราะ onAuthStateChanged จะทำงานให้อัตโนมัติ
                     console.log("Logged out");
                 });
             }
@@ -264,7 +273,6 @@ function setupAuthListeners() {
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบ...';
                     deleteAccBtn.disabled = true;
                     
-                    // กวาดล้างข้อมูล
                     if (recordsCol) {
                         const snapshot = await getDocs(recordsCol);
                         if (!snapshot.empty) {
@@ -273,21 +281,18 @@ function setupAuthListeners() {
                         }
                     }
 
-                    // สั่งลบ User (ตรงนี้จะ trigger onAuthStateChanged ให้ทำงานและเคลียร์ input เอง)
                     await deleteUser(user);
                     alert("ลบบัญชีเรียบร้อยแล้ว");
 
                 } catch (error) {
                     console.error("Delete Error:", error);
                     
-                    // ถ้าติดล็อก (Security) ให้ถามรหัสผ่านแล้ว Re-auth
                     if (error.code === 'auth/requires-recent-login') {
                         const password = prompt("เพื่อความปลอดภัย กรุณากรอกรหัสผ่านเพื่อยืนยันการลบ:");
                         if (password) {
                             try {
                                 const credential = EmailAuthProvider.credential(user.email, password);
                                 await reauthenticateWithCredential(user, credential);
-                                // Re-auth ผ่าน -> ลบซ้ำ
                                 await deleteUser(user);
                                 alert("ลบบัญชีเรียบร้อยแล้ว");
                             } catch (reAuthErr) {
@@ -297,7 +302,6 @@ function setupAuthListeners() {
                     } else {
                         alert("เกิดข้อผิดพลาด: " + error.message);
                     }
-                    // คืนค่าปุ่ม
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
                     deleteAccBtn.disabled = false;
                 }
@@ -636,6 +640,12 @@ function setupEventListeners() {
             
             if (expenseVal > 0 && currentTotalIncome <= 0) {
                 alert("⚠️ ไม่สามารถบันทึกรายจ่ายได้ เนื่องจากยอดรายรับรวมยังเป็น 0 ครับ \nกรุณาบันทึกรายรับก่อนครับ");
+                
+                // >>> [UPDATE 4] เคลียร์ข้อมูลช่องตัวเลขเมื่อติด Alert และปลดล็อกช่อง <<<
+                inc.value = "";
+                exp.value = "";
+                inc.disabled = false;
+                exp.disabled = false;
                 return;
             }
 
