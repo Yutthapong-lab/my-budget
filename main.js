@@ -1,16 +1,18 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
+// เพิ่ม import Auth
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// >>> Config กลาง (แก้ที่เดียว เปลี่ยนทั้งหน้าเว็บและ PDF) <<<
+// Config กลาง
 const APP_INFO = {
-    version: "v1.1.0",
+    version: "v1.0.0",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
-// --------------------------------------------------------
 
 let allRecords = [];
 let filteredRecords = [];
@@ -19,25 +21,80 @@ let editingId = null;
 let selectedCategories = [];
 const recordsCol = collection(db, "records"); 
 let masterCategories = [];
+const auth = getAuth(); // เริ่มต้น Auth
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Inject Footer Info (ใส่ข้อมูลลงหน้าเว็บ)
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject Footer
     const fVer = document.getElementById('footer-version');
     const fCred = document.getElementById('footer-credit');
     if(fVer) fVer.innerText = APP_INFO.version;
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
-    await loadMasterData();
-    const dateInput = document.getElementById('date');
-    if(dateInput) dateInput.valueAsDate = new Date();
-    
-    subscribeToFirestore();
-    setupEventListeners();
+    // --- ตรวจสอบสถานะการ Login ---
+    onAuthStateChanged(auth, async (user) => {
+        const loginSection = document.getElementById('login-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const footer = document.getElementById('app-footer');
 
-    startClock();
-    fetchWeather(); // ดึงสภาพอากาศ + ที่อยู่จริง
-    setupExportPDF();
+        if (user) {
+            // ถ้า Login แล้ว -> โชว์ Dashboard ซ่อน Login
+            loginSection.style.display = 'none';
+            dashboardSection.style.display = 'flex'; // แสดงแบบ Flex (เพราะเรา set css ไว้)
+            footer.style.display = 'flex';
+            
+            // เริ่มโหลดข้อมูลต่างๆ
+            await loadMasterData();
+            const dateInput = document.getElementById('date');
+            if(dateInput) dateInput.valueAsDate = new Date();
+            
+            subscribeToFirestore(); // เริ่มฟังข้อมูลจาก DB
+            startClock();
+            fetchWeather();
+            setupExportPDF();
+            
+        } else {
+            // ถ้ายังไม่ Login -> โชว์ Login ซ่อน Dashboard
+            loginSection.style.display = 'block';
+            dashboardSection.style.display = 'none';
+            footer.style.display = 'none';
+        }
+    });
+
+    setupAuthListeners();
+    setupEventListeners();
 });
+
+// --- Auth Logic ---
+function setupAuthListeners() {
+    // Login Form
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+            const errDiv = document.getElementById('login-error');
+            errDiv.innerText = "กำลังตรวจสอบ...";
+            
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                // ถ้าผ่าน onAuthStateChanged จะทำงานเอง
+                errDiv.innerText = "";
+            } catch (error) {
+                console.error(error);
+                errDiv.innerText = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+            }
+        });
+    }
+
+    // Logout Button
+    const logoutBtn = document.getElementById('btn-logout');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            signOut(auth);
+        });
+    }
+}
 
 // --- Widgets ---
 function startClock() {
@@ -45,19 +102,15 @@ function startClock() {
         const now = new Date();
         const timeEl = document.getElementById('clock-display');
         const dateEl = document.getElementById('date-display');
-        // นาฬิกาดุ๊กดิ๊กอยู่ใน HTML แล้ว แค่อัปเดตตัวเลข
         if(timeEl) timeEl.innerHTML = `<i class="fa-solid fa-clock anim-spin"></i> ${now.toLocaleTimeString('th-TH', { hour12: false })}`;
         if(dateEl) dateEl.innerText = now.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
     };
     updateTime(); setInterval(updateTime, 1000);
 }
 
-// --- Fetch Weather & Real Location (Reverse Geocoding) ---
 function fetchWeather() {
     const updateUI = (temp, desc, locName) => {
         document.getElementById('temp-val').innerText = temp;
-        // const icon = (desc === 0) ? "☀️" : (desc <= 3) ? "⛅" : (desc >= 95) ? "⛈️" : "🌧️"; 
-        // ไอคอนเรา Fix ไว้ใน HTML แล้ว (รูปเมฆ)
         document.getElementById('location-name').innerText = locName;
     }
 
@@ -65,43 +118,31 @@ function fetchWeather() {
         navigator.geolocation.getCurrentPosition(async (pos) => {
             try {
                 const { latitude: lat, longitude: lon } = pos.coords;
-
-                // 1. ดึงข้อมูลอากาศ
                 const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
                 const weatherData = await weatherRes.json();
 
-                // 2. ดึงชื่อสถานที่จริง (Reverse Geocoding จาก OpenStreetMap)
                 let locationName = "ตำแหน่งปัจจุบัน";
                 try {
                     const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&accept-language=th`);
                     const geoData = await geoRes.json();
-                    
                     if (geoData.address) {
                         const addr = geoData.address;
-                        // พยายามหา แขวง/ตำบล -> เขต/อำเภอ -> จังหวัด
                         const localArea = addr.suburb || addr.district || addr.town || "";
                         const province = addr.province || addr.city || "";
-                        
-                        if (localArea && province) {
-                            locationName = `${localArea} ${province}`;
-                        } else if (province) {
-                            locationName = province;
-                        }
+                        if (localArea && province) locationName = `${localArea} ${province}`;
+                        else if (province) locationName = province;
                     }
-                } catch (geoErr) {
-                    console.warn("Location fetch error:", geoErr);
-                }
+                } catch (geoErr) { console.warn(geoErr); }
 
                 if(weatherData.current_weather) {
                     updateUI(weatherData.current_weather.temperature, weatherData.current_weather.weathercode, locationName);
                 }
-
             } catch(e) { console.error(e); }
         }, () => updateUI("--", 0, "ไม่พบตำแหน่ง"));
     }
 }
 
-// --- Helper: แปลงวันที่เป็นไทย (DD/MM/YYYY พ.ศ.) ---
+// --- Helper Date ---
 function formatThaiDate(dateString) {
     if (!dateString) return "-";
     const [y, m, d] = dateString.split('-');
@@ -109,7 +150,7 @@ function formatThaiDate(dateString) {
     return `${d}/${m}/${thaiYear}`;
 }
 
-// --- PDF Export Logic (Full Options) ---
+// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -118,9 +159,7 @@ function setupExportPDF() {
         let binary = '';
         const bytes = new Uint8Array(buffer);
         const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
+        for (let i = 0; i < len; i++) { binary += String.fromCharCode(bytes[i]); }
         return window.btoa(binary);
     };
     
@@ -132,117 +171,61 @@ function setupExportPDF() {
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-
             const fontUrl = 'https://cdn.jsdelivr.net/gh/cadsondemak/Sarabun@master/fonts/Sarabun-Regular.ttf';
-            
             const response = await fetch(fontUrl);
-            if (!response.ok) {
-                throw new Error(`โหลดฟอนต์ไม่สำเร็จ (Status: ${response.status})`);
-            }
+            if (!response.ok) throw new Error(`โหลดฟอนต์ไม่สำเร็จ`);
             
             const fontBuffer = await response.arrayBuffer();
             const fontBase64 = arrayBufferToBase64(fontBuffer);
-
-            const fileName = "Sarabun-Regular.ttf";
-            doc.addFileToVFS(fileName, fontBase64);
-            doc.addFont(fileName, "Sarabun", "normal");
+            doc.addFileToVFS("Sarabun.ttf", fontBase64);
+            doc.addFont("Sarabun.ttf", "Sarabun", "normal");
             doc.setFont("Sarabun"); 
             
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> สร้าง PDF...`;
 
             doc.setFontSize(18); 
             doc.text("My Budget Report", 14, 22);
-            
             doc.setFontSize(10); 
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
-            // คอลัมน์ PDF (รวม Date+Time ไว้ช่องแรก)
             const tableColumn = ["Date / Time", "Item", "Income", "Expense", "Category", "Method"];
-            
             const tableRows = filteredRecords.map(r => {
                 let timeStr = "";
-                if (r.createdAt) {
-                    timeStr = new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) + " น.";
-                }
+                if (r.createdAt) timeStr = new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) + " น.";
                 const dateTimeStr = `${formatThaiDate(r.date)}\n${timeStr}`;
-
-                return [
-                    dateTimeStr,
-                    r.item, 
-                    r.income > 0 ? r.income.toFixed(2) : "-", 
-                    r.expense > 0 ? r.expense.toFixed(2) : "-",
-                    Array.isArray(r.category) ? r.category.join(", ") : r.category,
-                    r.method
-                ];
+                return [dateTimeStr, r.item, r.income>0?r.income.toFixed(2):"-", r.expense>0?r.expense.toFixed(2):"-", Array.isArray(r.category)?r.category.join(", "):r.category, r.method];
             });
 
             doc.autoTable({ 
-                head: [tableColumn], 
-                body: tableRows, 
-                startY: 40,
-                styles: { 
-                    font: 'Sarabun', 
-                    fontStyle: 'normal',
-                    valign: 'middle' 
-                },
-                headStyles: { 
-                    fillColor: [99, 102, 241],
-                    font: 'Sarabun',
-                    halign: 'center'
-                },
-                columnStyles: {
-                    0: { halign: 'center' } 
-                }
+                head: [tableColumn], body: tableRows, startY: 40,
+                styles: { font: 'Sarabun', fontStyle: 'normal', valign: 'middle' },
+                headStyles: { fillColor: [99, 102, 241], font: 'Sarabun', halign: 'center' },
+                columnStyles: { 0: { halign: 'center' } } 
             });
 
-            // --- Footer (Version, Credit, Page No.) ---
             const pageCount = doc.internal.getNumberOfPages();
             const pageWidth = doc.internal.pageSize.width;
             const pageHeight = doc.internal.pageSize.height;
-            const footerY = pageHeight - 10; 
-
-            doc.setFontSize(8); 
-            doc.setTextColor(100); 
+            doc.setFontSize(8); doc.setTextColor(100); 
 
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                
-                // ใช้ Config กลาง
-                doc.text(APP_INFO.version, 14, footerY);
-
-                const creditText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
-                doc.text(creditText, pageWidth / 2, footerY, { align: 'center' });
-
-                doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, footerY, { align: 'right' });
+                doc.text(APP_INFO.version, 14, pageHeight - 10);
+                doc.text(`${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+                doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
 
-            doc.setTextColor(0);
-
-            // ชื่อไฟล์
             const d = new Date();
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear() + 543;
-            const h = String(d.getHours()).padStart(2, '0');
-            const m = String(d.getMinutes()).padStart(2, '0');
-            const s = String(d.getSeconds()).padStart(2, '0');
-            
-            const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
-            
+            const fileNameStr = `my-budget_${d.getDate()}${d.getMonth()+1}${d.getFullYear()+543}.pdf`;
             doc.save(fileNameStr);
             
-        } catch (err) {
-            console.error("PDF Error:", err);
-            alert(`เกิดข้อผิดพลาด: ${err.message}`);
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
+        } catch (err) { console.error(err); alert(`Error: ${err.message}`); } 
+        finally { btn.innerHTML = originalText; btn.disabled = false; }
     });
 }
 
-// --- Main Logic ---
+// --- Logic ---
 function getColorForCategory(name) {
     const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
     return palettes[name.charCodeAt(0) % palettes.length];
@@ -263,9 +246,7 @@ async function saveRecord(rec) {
     } catch (err) { alert(err.message); }
 }
 
-window.deleteRecord = async function(id) {
-    if(confirm("ลบรายการนี้?")) await deleteDoc(doc(db, "records", id));
-}
+window.deleteRecord = async function(id) { if(confirm("ลบรายการนี้?")) await deleteDoc(doc(db, "records", id)); }
 
 window.editRecord = function(id) {
     const rec = allRecords.find(r => r.id === id);
@@ -338,14 +319,11 @@ function applyFilters() {
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
-    // Default 10 items
     const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1; if (currentPage > totalPages) currentPage = totalPages;
 
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-    // Update Total Count
     const totalCountEl = document.getElementById("total-count");
     if(totalCountEl) totalCountEl.innerText = filteredRecords.length;
 
@@ -358,7 +336,6 @@ function renderList() {
         const thaiDate = formatThaiDate(r.date);
         let timeStr = r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : "";
         if(timeStr) timeStr += " น.";
-
         const cats = Array.isArray(r.category) ? r.category : [r.category];
         const catHtml = cats.map(c => {
             const col = getColorForCategory(c);
