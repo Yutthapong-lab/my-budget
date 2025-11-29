@@ -1,5 +1,6 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
+// ⚠️ Import ให้ครบทุกตัว (รวมถึง reauthenticateWithCredential และ EmailAuthProvider)
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
@@ -8,8 +9,11 @@ import {
     onAuthStateChanged, 
     setPersistence, 
     browserSessionPersistence,
-    deleteUser
+    deleteUser,
+    reauthenticateWithCredential,
+    EmailAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
@@ -19,7 +23,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.11", 
+    version: "v1.1.0", 
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -27,6 +31,7 @@ const APP_INFO = {
 // ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
+// ฟังก์ชันแปลงตัวเลข (ย้ายมาบนสุด กันหาไม่เจอ)
 function formatNumber(n) { 
     if (n === undefined || n === null || isNaN(n)) return "0.00";
     return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
@@ -72,6 +77,7 @@ let unsubscribe = null;
 const auth = getAuth();
 let isRegisterMode = false;
 
+// ตั้งค่าให้ปิดเว็บแล้ว Logout ทันที
 setPersistence(auth, browserSessionPersistence)
   .then(() => console.log("Session Persistence: ON"))
   .catch((error) => console.error("Persistence Error:", error));
@@ -81,6 +87,7 @@ setPersistence(auth, browserSessionPersistence)
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ใส่เครดิตหน้าเว็บ
     const fCred = document.getElementById('footer-credit');
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
@@ -95,12 +102,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const fVer = document.getElementById('footer-version');
 
         if (user) {
+            // Login แล้ว
             loginSection.style.display = 'none';
             dashboardSection.style.display = 'flex';
             footer.style.display = 'flex';
             
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
+            // เช็ก Admin เพื่อโชว์ปุ่มจัดการ
             let versionText = APP_INFO.version;
             if (user.email === ADMIN_EMAIL) {
                 versionText += " (Super Admin)";
@@ -110,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if(fVer) fVer.innerText = versionText;
 
+            // ไปที่ Collection ส่วนตัว
             recordsCol = collection(db, "users", user.uid, "records");
             await loadMasterData();
             const dateInput = document.getElementById('date');
@@ -120,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchWeather();
             setupExportPDF();
         } else {
+            // ยังไม่ Login
             loginSection.style.display = 'block';
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
@@ -147,7 +158,7 @@ function checkAdminAccess() {
     }
 }
 
-// --- Auth System ---
+// --- Auth System (รวมการแก้ไขข้อ 1, 2, 4) ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
     const switchBtn = document.getElementById('auth-switch-btn');
@@ -155,11 +166,19 @@ function setupAuthListeners() {
     const authTitle = document.getElementById('auth-title');
     const authBtn = document.getElementById('auth-btn');
     const errDiv = document.getElementById('login-error');
+    const emailInput = document.getElementById('login-email');
+    const passInput = document.getElementById('login-pass');
 
+    // 1. สลับโหมด (Fix: ล้างค่า input เมื่อสลับ)
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             isRegisterMode = !isRegisterMode; 
             errDiv.innerText = ""; 
+            
+            // ล้างค่า
+            emailInput.value = "";
+            passInput.value = "";
+
             if (isRegisterMode) {
                 authTitle.innerText = "สมัครสมาชิกใหม่";
                 authBtn.innerText = "ลงทะเบียน";
@@ -179,8 +198,8 @@ function setupAuthListeners() {
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-pass').value;
+            const email = emailInput.value;
+            const pass = passInput.value;
             errDiv.innerText = "กำลังตรวจสอบ...";
             try {
                 if (isRegisterMode) {
@@ -201,14 +220,20 @@ function setupAuthListeners() {
         });
     }
 
+    // 2. Logout (Fix: ล้างค่า input เมื่อออก)
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            if(confirm("ออกจากระบบ?")) signOut(auth);
+            if(confirm("ออกจากระบบ?")) {
+                signOut(auth).then(() => {
+                    if(emailInput) emailInput.value = "";
+                    if(passInput) passInput.value = "";
+                });
+            }
         });
     }
 
-    // >>> ลบบัญชีถาวร (Delete Permanently) <<<
+    // 3. Delete Account (Fix: ลบทันที + Re-auth ถ้าจำเป็น)
     const deleteAccBtn = document.getElementById('btn-delete-account');
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
@@ -219,9 +244,10 @@ function setupAuthListeners() {
                 if (!user) return;
 
                 try {
-                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบข้อมูล...';
+                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบ...';
                     deleteAccBtn.disabled = true;
                     
+                    // กวาดล้างข้อมูล
                     if (recordsCol) {
                         const snapshot = await getDocs(recordsCol);
                         if (!snapshot.empty) {
@@ -230,16 +256,31 @@ function setupAuthListeners() {
                         }
                     }
 
+                    // สั่งลบ User
                     await deleteUser(user);
-                    alert("ลบบัญชีและข้อมูลทั้งหมดเรียบร้อยแล้ว");
+                    alert("ลบบัญชีเรียบร้อยแล้ว");
 
                 } catch (error) {
                     console.error("Delete Error:", error);
+                    
+                    // ถ้าติดล็อก (Security) ให้ถามรหัสผ่านแล้ว Re-auth
                     if (error.code === 'auth/requires-recent-login') {
-                        alert("เพื่อความปลอดภัย กรุณา 'ออกจากระบบ' แล้ว 'เข้าสู่ระบบใหม่' อีกครั้ง \nจากนั้นค่อยกดลบบัญชีครับ");
+                        const password = prompt("เพื่อความปลอดภัย กรุณากรอกรหัสผ่านเพื่อยืนยันการลบ:");
+                        if (password) {
+                            try {
+                                const credential = EmailAuthProvider.credential(user.email, password);
+                                await reauthenticateWithCredential(user, credential);
+                                // Re-auth ผ่าน -> ลบซ้ำ
+                                await deleteUser(user);
+                                alert("ลบบัญชีเรียบร้อยแล้ว");
+                            } catch (reAuthErr) {
+                                alert("รหัสผ่านไม่ถูกต้อง หรือเกิดข้อผิดพลาด: " + reAuthErr.message);
+                            }
+                        }
                     } else {
                         alert("เกิดข้อผิดพลาด: " + error.message);
                     }
+                    // คืนค่าปุ่ม
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
                     deleteAccBtn.disabled = false;
                 }
@@ -247,12 +288,12 @@ function setupAuthListeners() {
         });
     }
 
+    // Eye View
     const togglePassword = document.getElementById('toggle-password');
-    const passwordInput = document.getElementById('login-pass');
-    if (togglePassword && passwordInput) {
+    if (togglePassword && passInput) {
         togglePassword.addEventListener('click', function () {
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
+            const type = passInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passInput.setAttribute('type', type);
             this.classList.toggle('fa-eye');
             this.classList.toggle('fa-eye-slash');
         });
@@ -381,7 +422,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export ---
+// --- PDF Export (Fix Footer & Filename) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -432,10 +473,8 @@ function setupExportPDF() {
             doc.setFontSize(8); doc.setTextColor(100); 
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                // PDF Footer: เหลือแค่เลขหน้า
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
-            
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -572,10 +611,24 @@ function setupEventListeners() {
         form.addEventListener("submit", (e)=>{
             e.preventDefault();
             if(selectedCategories.length===0){ alert("เลือกหมวดหมู่ก่อนครับ"); return; }
+            
+            // >>> Fix 3: เช็กรายรับรวมทั้งหมดจากฐานข้อมูล ก่อนอนุญาตให้บันทึกรายจ่าย <<<
+            const incomeVal = parseFloat(inc.value) || 0;
+            const expenseVal = parseFloat(exp.value) || 0;
+            
+            // คำนวณรายรับรวมทั้งหมดที่มีอยู่ (allRecords คือข้อมูลทั้งหมดที่ดึงมา)
+            const currentTotalIncome = allRecords.reduce((sum, r) => sum + (Number(r.income) || 0), 0);
+            
+            // เงื่อนไข: ถ้าจะจ่าย (expense > 0) แต่รายรับรวมยังเป็น 0 หรือติดลบ -> ห้ามจ่าย
+            if (expenseVal > 0 && currentTotalIncome <= 0) {
+                alert("⚠️ ไม่สามารถบันทึกรายจ่ายได้ เนื่องจากยอดรายรับรวมยังเป็น 0 ครับ \nกรุณาบันทึกรายรับก่อนครับ");
+                return;
+            }
+
             saveRecord({
                 date: document.getElementById("date").value, item: document.getElementById("item").value,
                 category: selectedCategories, method: document.getElementById("method").value,
-                income: parseFloat(inc.value)||0, expense: parseFloat(exp.value)||0, note: document.getElementById("note").value
+                income: incomeVal, expense: expenseVal, note: document.getElementById("note").value
             });
             form.reset(); selectedCategories=[]; renderCategoryChips(); 
             document.getElementById("date").valueAsDate=new Date(); inc.disabled=false; exp.disabled=false;
@@ -589,13 +642,11 @@ function setupEventListeners() {
     if(ft) ft.addEventListener("input", applyFilters);
     document.querySelectorAll(".dropdown-filter").forEach(e=>e.addEventListener("change", applyFilters));
     document.getElementById("clear-filter")?.addEventListener("click", ()=>{
-        document.getElementById("filter-start").value=""; // Reset Date
-        document.getElementById("filter-end").value=""; // Reset Date
+        document.getElementById("filter-start").value="";
+        document.getElementById("filter-end").value="";
         document.getElementById("filter-month").value=""; document.getElementById("filter-category").value="";
         document.getElementById("filter-method").value=""; if(ft) ft.value=""; applyFilters();
     });
-    
-    // Listen to Date Changes
     document.getElementById("filter-start")?.addEventListener("change", applyFilters);
     document.getElementById("filter-end")?.addEventListener("change", applyFilters);
     
