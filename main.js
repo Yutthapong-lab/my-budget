@@ -19,10 +19,8 @@ let currentPage = 1;
 let editingId = null;
 let selectedCategories = [];
 let masterCategories = [];
-
-// ตัวแปรสำหรับเก็บ Collection ของ User คนปัจจุบัน (จะถูกกำหนดค่าตอน Login ผ่าน)
-let recordsCol = null; 
-let unsubscribe = null; // ตัวยกเลิกการฟังข้อมูล (เพื่อไม่ให้ฟังซ้ำซ้อน)
+let recordsCol = null; // Collection ส่วนตัว
+let unsubscribe = null;
 
 const auth = getAuth();
 
@@ -33,39 +31,33 @@ document.addEventListener('DOMContentLoaded', () => {
     if(fVer) fVer.innerText = APP_INFO.version;
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
-    // --- ตรวจสอบสถานะการ Login ---
+    // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
         const footer = document.getElementById('app-footer');
 
         if (user) {
-            // 1. Login สำเร็จ -> โชว์ Dashboard
             loginSection.style.display = 'none';
-            dashboardSection.style.display = 'flex'; 
+            dashboardSection.style.display = 'flex';
             footer.style.display = 'flex';
             
-            // 2. >>> จุดสำคัญ: เปลี่ยนเป้าหมายไปที่ห้องส่วนตัวของ User คนนี้ <<<
-            // Path: users / [UID] / records
+            // Set Path เป็นห้องส่วนตัว
             recordsCol = collection(db, "users", user.uid, "records");
 
-            // 3. โหลดข้อมูล
             await loadMasterData();
             const dateInput = document.getElementById('date');
             if(dateInput) dateInput.valueAsDate = new Date();
             
-            subscribeToFirestore(); // เริ่มดึงข้อมูลจากห้องส่วนตัว
+            subscribeToFirestore();
             startClock();
             fetchWeather();
             setupExportPDF();
-            
         } else {
-            // Logout หรือยังไม่ Login
             loginSection.style.display = 'block';
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
             
-            // ยกเลิกการฟังข้อมูลเก่า (ถ้ามี)
             if(unsubscribe) unsubscribe();
             allRecords = [];
             recordsCol = null;
@@ -76,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// --- Auth Logic ---
+// --- Auth ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -86,7 +78,6 @@ function setupAuthListeners() {
             const pass = document.getElementById('login-pass').value;
             const errDiv = document.getElementById('login-error');
             errDiv.innerText = "กำลังตรวจสอบ...";
-            
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
                 errDiv.innerText = "";
@@ -96,51 +87,37 @@ function setupAuthListeners() {
             }
         });
     }
-
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            if(confirm("ต้องการออกจากระบบ?")) {
-                signOut(auth);
-            }
+            if(confirm("ออกจากระบบ?")) signOut(auth);
         });
     }
 }
 
-// --- Logic การดึงข้อมูล (CRUD) ---
+// --- Data Logic ---
 function subscribeToFirestore() {
-    if (!recordsCol) return; // ถ้ายังไม่ Login ไม่ต้องทำอะไร
-
-    // ยกเลิกการฟังอันเก่าก่อน (เพื่อป้องกัน Memory Leak)
+    if (!recordsCol) return;
     if (unsubscribe) unsubscribe();
-
-    const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     
+    const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     unsubscribe = onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         applyFilters(); 
-    }, (error) => {
-        console.error("Error fetching data:", error);
-        // กรณี Permission Denied (เช่น กฎผิด) จะไม่พังทั้งหน้า แต่จะแจ้งเตือนใน Console
-    });
+    }, (error) => console.error("Data fetch error:", error));
 }
 
 async function saveRecord(rec) {
-    if (!recordsCol) return alert("กรุณาเข้าสู่ระบบก่อน");
+    if (!recordsCol) return alert("กรุณา Login ก่อน");
     try {
         if (editingId) { 
-            // แก้ไขข้อมูลใน Path ของ User นั้นๆ
             await updateDoc(doc(recordsCol, editingId), rec); 
-            editingId = null; 
-            resetSubmitButton(); 
+            editingId = null; resetSubmitButton(); 
         } else { 
             rec.createdAt = serverTimestamp(); 
             await addDoc(recordsCol, rec); 
         }
-    } catch (err) { 
-        console.error(err);
-        alert("บันทึกไม่สำเร็จ: " + err.message); 
-    }
+    } catch (err) { alert(err.message); }
 }
 
 window.deleteRecord = async function(id) {
@@ -148,7 +125,56 @@ window.deleteRecord = async function(id) {
     if(confirm("ลบรายการนี้?")) await deleteDoc(doc(recordsCol, id));
 }
 
-// --- Widgets & Others (เหมือนเดิม) ---
+window.editRecord = function(id) {
+    const rec = allRecords.find(r => r.id === id);
+    if (!rec) return;
+    document.getElementById("date").value = rec.date;
+    document.getElementById("item").value = rec.item;
+    selectedCategories = Array.isArray(rec.category) ? rec.category : [rec.category];
+    renderCategoryChips();
+    document.getElementById("method").value = rec.method;
+    const incInp = document.getElementById("income");
+    const expInp = document.getElementById("expense");
+    incInp.value = rec.income || ""; expInp.value = rec.expense || "";
+    incInp.disabled = false; expInp.disabled = false;
+    toggleInputState(incInp, expInp); toggleInputState(expInp, incInp);
+    document.getElementById("note").value = rec.note || "";
+    editingId = id;
+    const btn = document.querySelector("#entry-form button[type='submit']");
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> บันทึกการแก้ไข'; btn.classList.add("edit-mode");
+}
+
+function resetSubmitButton() {
+    const btn = document.querySelector("#entry-form button[type='submit']");
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk anim-beat"></i> บันทึกข้อมูล'; btn.classList.remove("edit-mode");
+}
+
+async function loadMasterData() {
+    const fill = (el, items) => { el.innerHTML = '<option value="">ทั้งหมด</option>'; if(el.id==="method") el.innerHTML='<option value="">เลือก...</option>'; items.forEach(i=>el.innerHTML+=`<option value="${i}">${i}</option>`); };
+    try {
+        const cSnap = await getDocs(collection(db, "categories"));
+        masterCategories = []; cSnap.forEach(d=>masterCategories.push(d.data().name)); masterCategories.sort();
+        const mSnap = await getDocs(collection(db, "methods"));
+        let methods = []; mSnap.forEach(d=>methods.push(d.data().name)); methods.sort();
+        fill(document.getElementById("filter-category"), masterCategories);
+        fill(document.getElementById("method"), methods);
+        fill(document.getElementById("filter-method"), methods);
+        renderCategoryChips();
+    } catch(e){ console.error(e); }
+}
+
+function renderCategoryChips() {
+    const c = document.getElementById("category-container"); c.innerHTML = "";
+    masterCategories.forEach(cat => {
+        const btn = document.createElement("div"); btn.className = "cat-chip-btn"; 
+        btn.innerHTML = cat;
+        if (selectedCategories.includes(cat)) { btn.classList.add("active"); btn.innerHTML = `<i class="fa-solid fa-check"></i> ${cat}`; }
+        btn.onclick = () => { selectedCategories.includes(cat) ? selectedCategories=selectedCategories.filter(x=>x!==cat) : selectedCategories.push(cat); renderCategoryChips(); };
+        c.appendChild(btn);
+    });
+}
+
+// --- Features ---
 function startClock() {
     const updateTime = () => {
         const now = new Date();
@@ -189,13 +215,6 @@ function fetchWeather() {
             } catch(e) { console.error(e); }
         }, () => updateUI("--", 0, "ไม่พบตำแหน่ง"));
     }
-}
-
-function formatThaiDate(dateString) {
-    if (!dateString) return "-";
-    const [y, m, d] = dateString.split('-');
-    const thaiYear = parseInt(y) + 543;
-    return `${d}/${m}/${thaiYear}`;
 }
 
 function setupExportPDF() {
@@ -260,61 +279,7 @@ function setupExportPDF() {
     });
 }
 
-function getColorForCategory(name) {
-    const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
-    return palettes[name.charCodeAt(0) % palettes.length];
-}
-
-window.editRecord = function(id) {
-    const rec = allRecords.find(r => r.id === id);
-    if (!rec) return;
-    document.getElementById("date").value = rec.date;
-    document.getElementById("item").value = rec.item;
-    selectedCategories = Array.isArray(rec.category) ? rec.category : [rec.category];
-    renderCategoryChips();
-    document.getElementById("method").value = rec.method;
-    const incInp = document.getElementById("income");
-    const expInp = document.getElementById("expense");
-    incInp.value = rec.income || ""; expInp.value = rec.expense || "";
-    incInp.disabled = false; expInp.disabled = false;
-    toggleInputState(incInp, expInp); toggleInputState(expInp, incInp);
-    document.getElementById("note").value = rec.note || "";
-    editingId = id;
-    const btn = document.querySelector("#entry-form button[type='submit']");
-    btn.innerHTML = '<i class="fa-solid fa-check"></i> บันทึกการแก้ไข'; btn.classList.add("edit-mode");
-}
-
-function resetSubmitButton() {
-    const btn = document.querySelector("#entry-form button[type='submit']");
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk anim-beat"></i> บันทึกข้อมูล'; btn.classList.remove("edit-mode");
-}
-
-async function loadMasterData() {
-    const fill = (el, items) => { el.innerHTML = '<option value="">ทั้งหมด</option>'; if(el.id==="method") el.innerHTML='<option value="">เลือก...</option>'; items.forEach(i=>el.innerHTML+=`<option value="${i}">${i}</option>`); };
-    try {
-        const cSnap = await getDocs(collection(db, "categories"));
-        masterCategories = []; cSnap.forEach(d=>masterCategories.push(d.data().name)); masterCategories.sort();
-        const mSnap = await getDocs(collection(db, "methods"));
-        let methods = []; mSnap.forEach(d=>methods.push(d.data().name)); methods.sort();
-        
-        fill(document.getElementById("filter-category"), masterCategories);
-        fill(document.getElementById("method"), methods);
-        fill(document.getElementById("filter-method"), methods);
-        renderCategoryChips();
-    } catch(e){ console.error(e); }
-}
-
-function renderCategoryChips() {
-    const c = document.getElementById("category-container"); c.innerHTML = "";
-    masterCategories.forEach(cat => {
-        const btn = document.createElement("div"); btn.className = "cat-chip-btn"; 
-        btn.innerHTML = cat;
-        if (selectedCategories.includes(cat)) { btn.classList.add("active"); btn.innerHTML = `<i class="fa-solid fa-check"></i> ${cat}`; }
-        btn.onclick = () => { selectedCategories.includes(cat) ? selectedCategories=selectedCategories.filter(x=>x!==cat) : selectedCategories.push(cat); renderCategoryChips(); };
-        c.appendChild(btn);
-    });
-}
-
+// --- Render & Filters ---
 window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
@@ -336,9 +301,13 @@ function applyFilters() {
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
-    const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
+    
+    let pageSize = parseInt(document.getElementById("page-size")?.value);
+    if(isNaN(pageSize) || pageSize < 1) pageSize = 10;
+
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
-    if (currentPage < 1) currentPage = 1; if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1; 
+    if (currentPage > totalPages) currentPage = totalPages;
 
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
     const totalCountEl = document.getElementById("total-count");
@@ -350,16 +319,20 @@ function renderList() {
     }
 
     displayItems.forEach(r => {
-        const thaiDate = formatThaiDate(r.date);
-        let timeStr = r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : "";
-        if(timeStr) timeStr += " น.";
-        const cats = Array.isArray(r.category) ? r.category : [r.category];
+        const thaiDate = formatThaiDate(r.date) || "-";
+        let timeStr = "";
+        try { if(r.createdAt && r.createdAt.seconds) timeStr = new Date(r.createdAt.seconds * 1000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + " น."; } catch(e){}
+
+        const itemText = r.item || "ไม่มีชื่อ";
+        const incomeNum = parseFloat(r.income) || 0;
+        const expenseNum = parseFloat(r.expense) || 0;
+        const incVal = incomeNum > 0 ? `+${formatNumber(incomeNum)}` : "-";
+        const expVal = expenseNum > 0 ? `-${formatNumber(expenseNum)}` : "-";
+        const cats = Array.isArray(r.category) ? r.category : [r.category || "ทั่วไป"];
         const catHtml = cats.map(c => {
             const col = getColorForCategory(c);
             return `<span class="tag-badge" style="background:${col.bg}; color:${col.text};"><i class="fa-solid fa-tag" style="font-size:10px;"></i> ${c}</span>`;
         }).join("");
-        const incVal = r.income > 0 ? `+${formatNumber(r.income)}` : "-";
-        const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "-";
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -368,14 +341,14 @@ function renderList() {
                 <div style="font-size:12px; color:#94a3b8;">${timeStr}</div>
             </td>
             <td>
-                <div>${r.item}</div>
-                <div style="font-size:12px; color:#94a3b8;">${r.note || ''}</div>
+                <div style="font-weight:600; color:#334155;">${itemText}</div>
+                <div style="font-size:12px; color:#94a3b8;">${r.note || ""}</div>
             </td>
-            <td style="text-align:right; color:#16a34a; font-weight:700;">${incVal}</td>
-            <td style="text-align:right; color:#dc2626; font-weight:700;">${expVal}</td>
+            <td style="text-align:right; color:#059669; font-weight:700;">${incVal}</td>
+            <td style="text-align:right; color:#e11d48; font-weight:700;">${expVal}</td>
             <td style="text-align:center;">${catHtml}</td>
             <td style="text-align:center;">
-               <span class="method-pill"><i class="fa-solid fa-credit-card" style="font-size:10px; color:#64748b;"></i> ${r.method}</span>
+               <span class="method-pill"><i class="fa-solid fa-credit-card" style="font-size:10px; color:#64748b;"></i> ${r.method || "-"}</span>
             </td>
             <td style="text-align:center;">
                <div style="display:flex; gap:6px; justify-content:center;">
@@ -387,15 +360,36 @@ function renderList() {
         container.appendChild(tr);
     });
     
-    document.getElementById("pagination-controls").innerHTML = `
-        <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-left"></i></button>
-        <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
-        <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-right"></i></button>`;
+    const paginationEl = document.getElementById("pagination-controls");
+    if(paginationEl) {
+        paginationEl.innerHTML = `
+            <button onclick="window.changePage(-1)" ${currentPage <= 1 ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-left"></i></button>
+            <span style="font-size:13px; color:#64748b; align-self:center;">${currentPage} / ${totalPages}</span>
+            <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-right"></i></button>`;
+    }
+}
+
+// --- Helpers (RESTORED HERE) ---
+function formatNumber(n) { 
+    return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
+}
+
+function formatThaiDate(dateString) {
+    if (!dateString) return "-";
+    const [y, m, d] = dateString.split('-');
+    const thaiYear = parseInt(y) + 543;
+    return `${d}/${m}/${thaiYear}`;
 }
 
 function toggleInputState(active, passive) {
-    if (active.value && parseFloat(active.value)>0) { passive.value=""; passive.disabled=true; } else { passive.disabled=false; }
+    if (active.value && parseFloat(active.value) > 0) { 
+        passive.value = ""; 
+        passive.disabled = true; 
+    } else { 
+        passive.disabled = false; 
+    }
 }
+
 function setupEventListeners() {
     const form = document.getElementById("entry-form");
     const inc = document.getElementById("income"), exp = document.getElementById("expense");
@@ -426,18 +420,4 @@ function setupEventListeners() {
         document.getElementById("filter-method").value=""; if(ft) ft.value=""; applyFilters();
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
-}
-// --- Helper Functions ---
-
-function formatNumber(n) { 
-    return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
-}
-
-function toggleInputState(active, passive) {
-    if (active.value && parseFloat(active.value) > 0) { 
-        passive.value = ""; 
-        passive.disabled = true; 
-    } else { 
-        passive.disabled = false; 
-    }
 }
