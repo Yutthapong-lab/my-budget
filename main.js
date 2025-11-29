@@ -4,6 +4,14 @@ import {
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
+// >>> ส่วนตั้งค่ากลาง (แก้ตรงนี้ทีเดียว เปลี่ยนทั้งเว็บและ PDF) <<<
+const APP_INFO = {
+    version: "v1.0.0",
+    credit: "Created by Yutthapong R.",
+    copyrightYear: "2025"
+};
+// -------------------------------------------------------------
+
 let allRecords = [];
 let filteredRecords = [];
 let currentPage = 1;
@@ -13,6 +21,12 @@ const recordsCol = collection(db, "records");
 let masterCategories = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Inject Footer Info to HTML
+    const fVer = document.getElementById('footer-version');
+    const fCred = document.getElementById('footer-credit');
+    if(fVer) fVer.innerText = APP_INFO.version;
+    if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
+
     await loadMasterData();
     const dateInput = document.getElementById('date');
     if(dateInput) dateInput.valueAsDate = new Date();
@@ -64,7 +78,7 @@ function formatThaiDate(dateString) {
     return `${d}/${m}/${thaiYear}`;
 }
 
-// --- PDF Export Logic (Full Footer: Version, Credit, Copyright, Page No.) ---
+// --- PDF Export Logic ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -151,33 +165,28 @@ function setupExportPDF() {
                 }
             });
 
-            // >>> ส่วนจัดการ Footer (Credit, Copyright, Version, Page Number) <<<
             const pageCount = doc.internal.getNumberOfPages();
             const pageWidth = doc.internal.pageSize.width;
             const pageHeight = doc.internal.pageSize.height;
-            const footerY = pageHeight - 10; // ตำแหน่งความสูงของ Footer
+            const footerY = pageHeight - 10; 
 
-            doc.setFontSize(8); // ใช้ตัวหนังสือเล็กสำหรับ Footer
-            doc.setTextColor(100); // สีเทาๆ ให้ดูเป็น Footer
+            doc.setFontSize(8); 
+            doc.setTextColor(100); 
 
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
                 
-                // 1. Version (ซ้ายสุด)
-                doc.text("v1.0.0", 14, footerY);
+                // ใช้ตัวแปร APP_INFO ที่ประกาศไว้ด้านบน
+                doc.text(APP_INFO.version, 14, footerY);
 
-                // 2. Credit & Copyright (กึ่งกลาง)
-                const creditText = "Created by Yutthapong R. | Copyright © 2025";
+                const creditText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
                 doc.text(creditText, pageWidth / 2, footerY, { align: 'center' });
 
-                // 3. Page Number (ขวาสุด)
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, footerY, { align: 'right' });
             }
 
-            // Reset text color กลับมาดำ (เผื่อไว้)
             doc.setTextColor(0);
 
-            // ตั้งชื่อไฟล์
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -186,7 +195,7 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
+            const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             
             doc.save(fileNameStr);
             
