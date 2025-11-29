@@ -11,7 +11,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.9", // <<< แก้ตรงนี้: ลบ (Secure) ออก ให้เหลือแค่เลขเวอร์ชัน
+    version: "v1.0.9", 
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -19,13 +19,11 @@ const APP_INFO = {
 // ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
-// ฟังก์ชันแปลงตัวเลข (ใส่คอมม่า)
 function formatNumber(n) { 
     if (n === undefined || n === null || isNaN(n)) return "0.00";
     return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
 }
 
-// ฟังก์ชันแปลงวันที่ไทย
 function formatThaiDate(dateString) {
     if (!dateString) return "-";
     try {
@@ -35,7 +33,6 @@ function formatThaiDate(dateString) {
     } catch(e) { return dateString; }
 }
 
-// ฟังก์ชันเลือกสีหมวดหมู่
 function getColorForCategory(name) {
     const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
     if (!name || typeof name !== 'string') return palettes[0];
@@ -43,7 +40,6 @@ function getColorForCategory(name) {
     return palettes[charCode % palettes.length] || palettes[0];
 }
 
-// ฟังก์ชันสลับสถานะช่องกรอกเงิน
 function toggleInputState(active, passive) {
     if (active.value && parseFloat(active.value) > 0) { 
         passive.value = ""; 
@@ -68,7 +64,6 @@ let unsubscribe = null;
 const auth = getAuth();
 let isRegisterMode = false;
 
-// ตั้งค่า Session Persistence (ปิดเว็บ = Logout)
 setPersistence(auth, browserSessionPersistence)
   .then(() => console.log("Session Persistence: ON"))
   .catch((error) => console.error("Persistence Error:", error));
@@ -78,13 +73,11 @@ setPersistence(auth, browserSessionPersistence)
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject Footer Credit
     const fCred = document.getElementById('footer-credit');
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
     checkAdminAccess(); 
 
-    // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
@@ -100,19 +93,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
-            // >>> Logic แสดง Version <<<
             let versionText = APP_INFO.version;
-            // ถ้าเป็น Admin ให้เติม (Super Admin) ต่อท้าย
             if (user.email === ADMIN_EMAIL) {
                 versionText += " (Super Admin)";
                 if(settingLink) settingLink.style.display = 'flex';
             } else {
-                // ถ้าเป็น User ทั่วไป แสดงแค่ v1.0.9 เฉยๆ
                 if(settingLink) settingLink.style.display = 'none';
             }
             if(fVer) fVer.innerText = versionText;
 
-            // Load Data
             recordsCol = collection(db, "users", user.uid, "records");
             await loadMasterData();
             const dateInput = document.getElementById('date');
@@ -150,7 +139,6 @@ function checkAdminAccess() {
     }
 }
 
-// --- Auth System ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
     const switchBtn = document.getElementById('auth-switch-btn');
@@ -253,7 +241,6 @@ function setupAuthListeners() {
     }
 }
 
-// --- Data Management ---
 function subscribeToFirestore() {
     if (!recordsCol) return;
     if (unsubscribe) unsubscribe();
@@ -332,7 +319,6 @@ function renderCategoryChips() {
     });
 }
 
-// --- Features ---
 function startClock() {
     const updateTime = () => {
         const now = new Date();
@@ -375,7 +361,6 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -426,7 +411,6 @@ function setupExportPDF() {
             doc.setFontSize(8); doc.setTextColor(100); 
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                // Footer: Show only page number in PDF
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
             
@@ -438,7 +422,6 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            // Format: my-budget-report_ddmmyyyy-hhmmss.pdf
             const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             doc.save(fileNameStr);
 
@@ -447,21 +430,34 @@ function setupExportPDF() {
     });
 }
 
-// --- Render & Filters ---
+// --- Render & Filters (Updated Date Range) ---
 window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
-    const fMonth = document.getElementById("filter-month")?.value;
+    // 1. รับค่าจาก Date Picker 2 ช่อง
+    const fStart = document.getElementById("filter-start")?.value;
+    const fEnd = document.getElementById("filter-end")?.value;
+    
     const fCat = document.getElementById("filter-category")?.value;
     const fMethod = document.getElementById("filter-method")?.value;
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
-        const mMonth = fMonth ? r.date?.startsWith(fMonth) : true;
+        // 2. Logic การกรองวันที่
+        let isDateMatch = true;
+        if (fStart && fEnd) {
+            isDateMatch = r.date >= fStart && r.date <= fEnd;
+        } else if (fStart) {
+            isDateMatch = r.date >= fStart;
+        } else if (fEnd) {
+            isDateMatch = r.date <= fEnd;
+        }
+
         const mCat = fCat ? (Array.isArray(r.category) ? r.category.includes(fCat) : r.category===fCat) : true;
         const mMethod = fMethod ? r.method === fMethod : true;
         const mText = fText ? JSON.stringify(r).toLowerCase().includes(fText) : true;
-        return mMonth && mCat && mMethod && mText;
+        
+        return isDateMatch && mCat && mMethod && mText;
     });
     currentPage = 1; renderList(); updateSummary();
 }
@@ -579,8 +575,18 @@ function setupEventListeners() {
     if(ft) ft.addEventListener("input", applyFilters);
     document.querySelectorAll(".dropdown-filter").forEach(e=>e.addEventListener("change", applyFilters));
     document.getElementById("clear-filter")?.addEventListener("click", ()=>{
-        document.getElementById("filter-month").value=""; document.getElementById("filter-category").value="";
-        document.getElementById("filter-method").value=""; if(ft) ft.value=""; applyFilters();
+        // Reset Date Range
+        document.getElementById("filter-start").value = "";
+        document.getElementById("filter-end").value = "";
+        
+        document.getElementById("filter-category").value="";
+        document.getElementById("filter-method").value=""; 
+        if(ft) ft.value=""; 
+        applyFilters();
     });
+    // Add Event Listeners for Date Inputs
+    document.getElementById("filter-start")?.addEventListener("change", applyFilters);
+    document.getElementById("filter-end")?.addEventListener("change", applyFilters);
+    
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
