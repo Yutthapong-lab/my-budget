@@ -56,7 +56,7 @@ function fetchWeather() {
     }
 }
 
-// --- Fix: PDF Export Logic (Fetch Font & Add to VFS) ---
+// --- Fix: PDF Export Logic (Updated Stable Font URL) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -82,26 +82,26 @@ function setupExportPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // 1. โหลดไฟล์ฟอนต์ Sarabun จาก CDN (Google Fonts via jsDelivr)
-            const fontUrl = 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/sarabun/Sarabun-Regular.ttf';
-            const response = await fetch(fontUrl);
+            // >>> [แก้ไขลิงก์] ใช้ CDN ของเจ้าของฟอนต์ (Cadsondemak) โดยตรงเพื่อความเสถียร <<<
+            const fontUrl = 'https://cdn.jsdelivr.net/gh/cadsondemak/Sarabun@master/fonts/Sarabun-Regular.ttf';
             
+            const response = await fetch(fontUrl);
             if (!response.ok) {
-                throw new Error("ไม่สามารถดาวน์โหลดฟอนต์ได้");
+                throw new Error(`โหลดฟอนต์ไม่สำเร็จ (Status: ${response.status})`);
             }
             
             const fontBuffer = await response.arrayBuffer();
             const fontBase64 = arrayBufferToBase64(fontBuffer);
 
-            // 2. เพิ่มฟอนต์ลงใน Virtual File System (VFS) ของ jsPDF
+            // เพิ่มฟอนต์ลงใน Virtual File System (VFS) ของ jsPDF
             const fileName = "Sarabun-Regular.ttf";
             doc.addFileToVFS(fileName, fontBase64);
             doc.addFont(fileName, "Sarabun", "normal");
             
-            // 3. เรียกใช้ฟอนต์
+            // เรียกใช้ฟอนต์
             doc.setFont("Sarabun"); 
             
-            // เริ่มวาดเนื้อหา PDF
+            // เริ่มสร้างเอกสาร
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้าง PDF...`;
 
             doc.setFontSize(18); 
@@ -149,7 +149,8 @@ function setupExportPDF() {
             
         } catch (err) {
             console.error("PDF Error:", err);
-            alert("เกิดข้อผิดพลาดในการสร้าง PDF: " + err.message);
+            // แสดงข้อความแนะนำถ้าโหลดไม่ได้จริงๆ
+            alert(`เกิดข้อผิดพลาด: ${err.message}\n\nลองตรวจสอบอินเทอร์เน็ต หรือดาวน์โหลดไฟล์ 'Sarabun-Regular.ttf' มาวางไว้ในโฟลเดอร์เดียวกับ index.html`);
         } finally {
             // คืนค่าปุ่มกลับสู่สภาพเดิม
             btn.innerHTML = originalText;
