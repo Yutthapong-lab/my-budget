@@ -1,6 +1,7 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
+// >>> เพิ่ม import createUserWithEmailAndPassword <<<
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } 
 from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
@@ -11,7 +12,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.4",
+    version: "v1.0.5 (Auth)",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -63,6 +64,7 @@ let masterCategories = [];
 let recordsCol = null;
 let unsubscribe = null;
 const auth = getAuth();
+let isRegisterMode = false; // ตัวแปรบอกสถานะว่ากำลัง Login หรือ Register
 
 // ==========================================
 // >>> 3. การทำงานหลัก (Main Logic) <<<
@@ -116,25 +118,71 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// --- Auth System ---
+// --- Auth System (Updated) ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
+    const switchBtn = document.getElementById('auth-switch-btn');
+    const switchText = document.getElementById('auth-switch-text');
+    const authTitle = document.getElementById('auth-title');
+    const authBtn = document.getElementById('auth-btn');
+    const errDiv = document.getElementById('login-error');
+
+    // 1. ฟังก์ชันสลับหน้า Login / Register
+    if (switchBtn) {
+        switchBtn.addEventListener('click', () => {
+            isRegisterMode = !isRegisterMode; // สลับสถานะ
+            errDiv.innerText = ""; // เคลียร์ Error เดิม
+            
+            if (isRegisterMode) {
+                // โหมดสมัครสมาชิก
+                authTitle.innerText = "สมัครสมาชิกใหม่";
+                authBtn.innerText = "ลงทะเบียน";
+                switchText.innerText = "มีบัญชีอยู่แล้ว?";
+                switchBtn.innerText = "เข้าสู่ระบบ";
+                authBtn.style.background = "#10b981"; // เปลี่ยนปุ่มเป็นสีเขียว
+            } else {
+                // โหมดล็อกอิน
+                authTitle.innerText = "เข้าสู่ระบบ";
+                authBtn.innerText = "เข้าใช้งาน";
+                switchText.innerText = "ยังไม่มีบัญชี?";
+                switchBtn.innerText = "สมัครสมาชิก";
+                authBtn.style.background = "var(--primary)"; // สีม่วงเดิม
+            }
+        });
+    }
+
+    // 2. ฟังก์ชัน Submit (Login หรือ Register ตามโหมดปัจจุบัน)
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-pass').value;
-            const errDiv = document.getElementById('login-error');
             errDiv.innerText = "กำลังตรวจสอบ...";
+            
             try {
-                await signInWithEmailAndPassword(auth, email, pass);
+                if (isRegisterMode) {
+                    // >>> สมัครสมาชิก <<<
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                    // สมัครเสร็จแล้วไม่ต้องทำอะไร onAuthStateChanged จะพาเข้าหน้าหลักเอง
+                } else {
+                    // >>> เข้าสู่ระบบ <<<
+                    await signInWithEmailAndPassword(auth, email, pass);
+                }
                 errDiv.innerText = "";
             } catch (error) {
                 console.error(error);
-                errDiv.innerText = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+                let msg = "เกิดข้อผิดพลาด";
+                // แปล Error ให้อ่านง่าย
+                if(error.code === 'auth/email-already-in-use') msg = "อีเมลนี้มีผู้ใช้งานแล้ว";
+                else if(error.code === 'auth/weak-password') msg = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
+                else if(error.code === 'auth/invalid-email') msg = "รูปแบบอีเมลไม่ถูกต้อง";
+                else if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+                
+                errDiv.innerText = msg;
             }
         });
     }
+
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -142,14 +190,12 @@ function setupAuthListeners() {
         });
     }
 
-    // >>> เพิ่มฟังก์ชัน Toggle Eye View ตรงนี้ <<<
     const togglePassword = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('login-pass');
     if (togglePassword && passwordInput) {
         togglePassword.addEventListener('click', function () {
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
-            // สลับไอคอน
             this.classList.toggle('fa-eye');
             this.classList.toggle('fa-eye-slash');
         });
