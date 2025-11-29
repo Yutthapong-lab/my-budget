@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     subscribeToFirestore();
     setupEventListeners();
 
-    // Start Widgets
     startClock();
     fetchWeather();
     setupExportPDF();
@@ -67,7 +66,6 @@ function setupExportPDF() {
         doc.setFontSize(18); doc.text("My Budget Report", 14, 22);
         doc.setFontSize(10); doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
 
-        // Define columns based on new order
         const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
         const tableRows = filteredRecords.map(r => [
             r.date, r.item, 
@@ -177,11 +175,17 @@ function applyFilters() {
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
-    const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
+    // ปรับ Fallback เป็น 5 เพื่อให้สอดคล้องกับ UI
+    const pageSize = parseInt(document.getElementById("page-size")?.value || 5);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1; if (currentPage > totalPages) currentPage = totalPages;
 
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    if(displayItems.length === 0) {
+        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;">- ไม่พบข้อมูล -</td></tr>`;
+        return;
+    }
 
     displayItems.forEach(r => {
         let timeStr = r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : "";
@@ -194,7 +198,6 @@ function renderList() {
         const expVal = r.expense > 0 ? `-${formatNumber(r.expense)}` : "-";
 
         const tr = document.createElement("tr");
-        // จัดเรียง Column: วันที่ > รายการ > รายรับ > รายจ่าย > หมวดหมู่ > วิธี > จัดการ
         tr.innerHTML = `
             <td>
                 <div style="font-weight:600;">${r.date}</div>
