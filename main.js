@@ -1,6 +1,6 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
-// ⚠️ Import ให้ครบทุกตัว (รวมถึง reauthenticateWithCredential และ EmailAuthProvider)
+// ⚠️ Import ให้ครบทุกตัว
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
@@ -23,7 +23,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.0", 
+    version: "v1.1.1", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -31,7 +31,7 @@ const APP_INFO = {
 // ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
-// ฟังก์ชันแปลงตัวเลข (ย้ายมาบนสุด กันหาไม่เจอ)
+// ฟังก์ชันแปลงตัวเลข
 function formatNumber(n) { 
     if (n === undefined || n === null || isNaN(n)) return "0.00";
     return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchWeather();
             setupExportPDF();
         } else {
-            // ยังไม่ Login
+            // ยังไม่ Login หรือ Logout แล้ว
             loginSection.style.display = 'block';
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
@@ -140,6 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if(unsubscribe) unsubscribe();
             allRecords = [];
             recordsCol = null;
+
+            // >>> [UPDATE 1] สั่งล้างช่อง Input ทุกครั้งที่สถานะเป็น Logout (หรือถูกลบบัญชี) <<<
+            if(document.getElementById('login-email')) document.getElementById('login-email').value = "";
+            if(document.getElementById('login-pass')) document.getElementById('login-pass').value = "";
+            if(document.getElementById('login-error')) document.getElementById('login-error').innerText = "";
         }
     });
 
@@ -158,7 +163,7 @@ function checkAdminAccess() {
     }
 }
 
-// --- Auth System (รวมการแก้ไขข้อ 1, 2, 4) ---
+// --- Auth System ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
     const switchBtn = document.getElementById('auth-switch-btn');
@@ -169,7 +174,18 @@ function setupAuthListeners() {
     const emailInput = document.getElementById('login-email');
     const passInput = document.getElementById('login-pass');
 
-    // 1. สลับโหมด (Fix: ล้างค่า input เมื่อสลับ)
+    // >>> [UPDATE 2] ฟังก์ชันปุ่ม Reset <<<
+    const btnResetLogin = document.getElementById('btn-reset-login');
+    if (btnResetLogin) {
+        btnResetLogin.addEventListener('click', () => {
+            emailInput.value = "";
+            passInput.value = "";
+            errDiv.innerText = "";
+            emailInput.focus(); // ให้เคอร์เซอร์กลับไปรอที่ช่องอีเมล
+        });
+    }
+
+    // 1. สลับโหมด
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             isRegisterMode = !isRegisterMode; 
@@ -215,25 +231,26 @@ function setupAuthListeners() {
                 else if(error.code === 'auth/weak-password') msg = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
                 else if(error.code === 'auth/invalid-email') msg = "รูปแบบอีเมลไม่ถูกต้อง";
                 else if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+                else if(error.code === 'auth/too-many-requests') msg = "กรอกรหัสผิดบ่อยเกินไป กรุณารอสักครู่";
                 errDiv.innerText = msg;
             }
         });
     }
 
-    // 2. Logout (Fix: ล้างค่า input เมื่อออก)
+    // 2. Logout
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if(confirm("ออกจากระบบ?")) {
                 signOut(auth).then(() => {
-                    if(emailInput) emailInput.value = "";
-                    if(passInput) passInput.value = "";
+                    // ไม่ต้องสั่งเคลียร์ตรงนี้ซ้ำ เพราะ onAuthStateChanged จะทำงานให้อัตโนมัติ
+                    console.log("Logged out");
                 });
             }
         });
     }
 
-    // 3. Delete Account (Fix: ลบทันที + Re-auth ถ้าจำเป็น)
+    // 3. Delete Account
     const deleteAccBtn = document.getElementById('btn-delete-account');
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
@@ -256,7 +273,7 @@ function setupAuthListeners() {
                         }
                     }
 
-                    // สั่งลบ User
+                    // สั่งลบ User (ตรงนี้จะ trigger onAuthStateChanged ให้ทำงานและเคลียร์ input เอง)
                     await deleteUser(user);
                     alert("ลบบัญชีเรียบร้อยแล้ว");
 
@@ -422,7 +439,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export (Fix Footer & Filename) ---
+// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -612,14 +629,11 @@ function setupEventListeners() {
             e.preventDefault();
             if(selectedCategories.length===0){ alert("เลือกหมวดหมู่ก่อนครับ"); return; }
             
-            // >>> Fix 3: เช็กรายรับรวมทั้งหมดจากฐานข้อมูล ก่อนอนุญาตให้บันทึกรายจ่าย <<<
+            // เช็กรายรับรวม
             const incomeVal = parseFloat(inc.value) || 0;
             const expenseVal = parseFloat(exp.value) || 0;
-            
-            // คำนวณรายรับรวมทั้งหมดที่มีอยู่ (allRecords คือข้อมูลทั้งหมดที่ดึงมา)
             const currentTotalIncome = allRecords.reduce((sum, r) => sum + (Number(r.income) || 0), 0);
             
-            // เงื่อนไข: ถ้าจะจ่าย (expense > 0) แต่รายรับรวมยังเป็น 0 หรือติดลบ -> ห้ามจ่าย
             if (expenseVal > 0 && currentTotalIncome <= 0) {
                 alert("⚠️ ไม่สามารถบันทึกรายจ่ายได้ เนื่องจากยอดรายรับรวมยังเป็น 0 ครับ \nกรุณาบันทึกรายรับก่อนครับ");
                 return;
@@ -644,7 +658,7 @@ function setupEventListeners() {
     document.getElementById("clear-filter")?.addEventListener("click", ()=>{
         document.getElementById("filter-start").value="";
         document.getElementById("filter-end").value="";
-        document.getElementById("filter-month").value=""; document.getElementById("filter-category").value="";
+        document.getElementById("filter-category").value="";
         document.getElementById("filter-method").value=""; if(ft) ft.value=""; applyFilters();
     });
     document.getElementById("filter-start")?.addEventListener("change", applyFilters);
