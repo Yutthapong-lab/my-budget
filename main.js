@@ -60,24 +60,58 @@ function fetchWeather() {
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
+    
     btn.addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
-        
-        doc.setFontSize(18); doc.text("My Budget Report", 14, 22);
-        doc.setFontSize(10); doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
 
+        // 1. ตั้งค่าฟอนต์ภาษาไทย
+        doc.setFont('Sarabun'); 
+        
+        // Header
+        doc.setFontSize(18); 
+        doc.text("My Budget Report", 14, 22);
+        
+        doc.setFontSize(10); 
+        doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
+
+        // Columns
         const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
         const tableRows = filteredRecords.map(r => [
-            r.date, r.item, 
+            r.date, 
+            r.item, 
             r.income > 0 ? r.income.toFixed(2) : "-", 
             r.expense > 0 ? r.expense.toFixed(2) : "-",
             Array.isArray(r.category) ? r.category.join(", ") : r.category,
             r.method
         ]);
 
-        doc.autoTable({ head: [tableColumn], body: tableRows, startY: 35 });
-        doc.save("budget-report.pdf");
+        // 2. สร้างตารางพร้อมระบุฟอนต์ไทยใน Style
+        doc.autoTable({ 
+            head: [tableColumn], 
+            body: tableRows, 
+            startY: 35,
+            styles: { 
+                font: 'Sarabun', 
+                fontStyle: 'normal' 
+            },
+            headStyles: { 
+                fillColor: [99, 102, 241],
+                font: 'Sarabun'
+            }
+        });
+
+        // 3. สร้างชื่อไฟล์ตามรูปแบบ my-budget_ddmmyyy_hhmmss
+        const d = new Date();
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear() + 543;
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+
+        const fileName = `my-budget_${day}${month}${year}_${h}${m}${s}.pdf`;
+        doc.save(fileName);
     });
 }
 
