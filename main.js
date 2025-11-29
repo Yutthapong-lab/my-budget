@@ -64,7 +64,7 @@ function formatThaiDate(dateString) {
     return `${d}/${m}/${thaiYear}`;
 }
 
-// --- PDF Export Logic (Merged Date/Time + Pagination) ---
+// --- PDF Export Logic (Full Footer: Version, Credit, Copyright, Page No.) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -112,7 +112,6 @@ function setupExportPDF() {
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
-            // 1. ตัดคอลัมน์ Time ออก (เพราะจะรวมกับ Date)
             const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
             
             const tableRows = filteredRecords.map(r => {
@@ -121,7 +120,6 @@ function setupExportPDF() {
                     timeStr = new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) + " น.";
                 }
 
-                // 2. รวม Date และ Time ด้วย \n (ขึ้นบรรทัดใหม่)
                 const dateTimeStr = `${formatThaiDate(r.date)}\n${timeStr}`;
 
                 return [
@@ -141,7 +139,7 @@ function setupExportPDF() {
                 styles: { 
                     font: 'Sarabun', 
                     fontStyle: 'normal',
-                    valign: 'middle' // จัดแนวตั้งให้อยู่กึ่งกลางเพื่อความสวยงาม
+                    valign: 'middle' 
                 },
                 headStyles: { 
                     fillColor: [99, 102, 241],
@@ -149,22 +147,37 @@ function setupExportPDF() {
                     halign: 'center'
                 },
                 columnStyles: {
-                    0: { halign: 'center' } // จัดคอลัมน์ Date ให้กึ่งกลาง
+                    0: { halign: 'center' } 
                 }
             });
 
-            // 3. เพิ่มเลขหน้า (Pagination)
+            // >>> ส่วนจัดการ Footer (Credit, Copyright, Version, Page Number) <<<
             const pageCount = doc.internal.getNumberOfPages();
-            doc.setFontSize(10);
+            const pageWidth = doc.internal.pageSize.width;
+            const pageHeight = doc.internal.pageSize.height;
+            const footerY = pageHeight - 10; // ตำแหน่งความสูงของ Footer
+
+            doc.setFontSize(8); // ใช้ตัวหนังสือเล็กสำหรับ Footer
+            doc.setTextColor(100); // สีเทาๆ ให้ดูเป็น Footer
+
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                // เขียน text ที่มุมขวาล่าง: หน้าที่ X จาก Y
-                const pageText = `หน้าที่ ${i} จาก ${pageCount}`;
-                const pageWidth = doc.internal.pageSize.width;
-                const pageHeight = doc.internal.pageSize.height;
-                doc.text(pageText, pageWidth - 20, pageHeight - 10, { align: 'right' });
+                
+                // 1. Version (ซ้ายสุด)
+                doc.text("v1.0.0", 14, footerY);
+
+                // 2. Credit & Copyright (กึ่งกลาง)
+                const creditText = "Created by Yutthapong R. | Copyright © 2025";
+                doc.text(creditText, pageWidth / 2, footerY, { align: 'center' });
+
+                // 3. Page Number (ขวาสุด)
+                doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, footerY, { align: 'right' });
             }
 
+            // Reset text color กลับมาดำ (เผื่อไว้)
+            doc.setTextColor(0);
+
+            // ตั้งชื่อไฟล์
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -173,7 +186,7 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
+            const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
             
             doc.save(fileNameStr);
             
