@@ -7,24 +7,24 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
 // ==========================================
-// >>> 1. ส่วนตั้งค่า <<<
+// >>> 1. ส่วนตั้งค่าและฟังก์ชันช่วย (Helper) <<<
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.8", // ใส่แค่เลขเวอร์ชันเพียวๆ (เดี๋ยวโค้ดจะเติมคำว่า Super Admin ให้เองถ้าใช่คุณ)
+    version: "v1.0.8",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
-// ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ (คนเดียวที่จะเห็นคำว่า Super Admin)
-const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
+const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; // ⚠️ อย่าลืมใส่อีเมล Admin ของคุณตรงนี้
 
-// ... (ฟังก์ชัน Helper: formatNumber, formatThaiDate, getColorForCategory, toggleInputState) ...
+// ฟังก์ชันแปลงตัวเลข (ใส่คอมม่า)
 function formatNumber(n) { 
     if (n === undefined || n === null || isNaN(n)) return "0.00";
     return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
 }
 
+// ฟังก์ชันแปลงวันที่ไทย
 function formatThaiDate(dateString) {
     if (!dateString) return "-";
     try {
@@ -34,6 +34,7 @@ function formatThaiDate(dateString) {
     } catch(e) { return dateString; }
 }
 
+// ฟังก์ชันเลือกสีหมวดหมู่
 function getColorForCategory(name) {
     const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
     if (!name || typeof name !== 'string') return palettes[0];
@@ -41,6 +42,7 @@ function getColorForCategory(name) {
     return palettes[charCode % palettes.length] || palettes[0];
 }
 
+// ฟังก์ชันสลับสถานะช่องกรอกเงิน
 function toggleInputState(active, passive) {
     if (active.value && parseFloat(active.value) > 0) { 
         passive.value = ""; 
@@ -70,11 +72,11 @@ let isRegisterMode = false;
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject Footer Credit (ส่วน Version จะไปใส่ตอนเช็ก User แล้ว)
+    // Inject Footer (หน้าเว็บยังคงโชว์เครดิตตามปกติ หรือจะลบออกก็ได้ถ้าต้องการ)
+    const fVer = document.getElementById('footer-version');
     const fCred = document.getElementById('footer-credit');
-    if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
-
-    checkAdminAccess(); // ตรวจสอบสิทธิ์หน้า Manage
+    
+    checkAdminAccess(); 
 
     // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
@@ -83,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.getElementById('app-footer');
         const userDisplay = document.getElementById('user-display');
         const settingLink = document.querySelector('.setting-link');
-        const fVer = document.getElementById('footer-version'); // จุดแสดง Version
 
         if (user) {
             loginSection.style.display = 'none';
@@ -92,18 +93,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
-            // >>> Logic แสดง Version <<<
-            // ถ้าอีเมลตรงกับ Admin ให้เติม (Super Admin) ต่อท้าย
+            // Version Logic for Web Footer
             let versionText = APP_INFO.version;
             if (user.email === ADMIN_EMAIL) {
                 versionText += " (Super Admin)";
-                if(settingLink) settingLink.style.display = 'flex'; // โชว์ปุ่มจัดการ
+                if(settingLink) settingLink.style.display = 'flex';
             } else {
-                if(settingLink) settingLink.style.display = 'none'; // ซ่อนปุ่มจัดการ
+                if(settingLink) settingLink.style.display = 'none';
             }
-            if(fVer) fVer.innerText = versionText; // แสดงผลที่ Footer
+            if(fVer) fVer.innerText = versionText;
+            if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
-            // ชี้เป้าไปที่ห้องส่วนตัวของ User
             recordsCol = collection(db, "users", user.uid, "records");
 
             await loadMasterData();
@@ -119,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
             if(userDisplay) userDisplay.innerText = "...";
-            // ถ้ายังไม่ Login ให้โชว์ Version ปกติ
             if(fVer) fVer.innerText = APP_INFO.version;
             
             if(unsubscribe) unsubscribe();
@@ -132,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// ฟังก์ชันป้องกันหน้า Admin
 function checkAdminAccess() {
     if (window.location.pathname.includes("manage.html")) {
         onAuthStateChanged(auth, (user) => {
@@ -369,7 +367,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export ---
+// --- PDF Export (Clean Footer + Custom Filename) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -418,21 +416,25 @@ function setupExportPDF() {
             const pageWidth = doc.internal.pageSize.width;
             const pageHeight = doc.internal.pageSize.height;
             doc.setFontSize(8); doc.setTextColor(100); 
-            
-            // >>> Logic แสดง Version ใน PDF <<<
-            const user = auth.currentUser;
-            let versionText = APP_INFO.version;
-            if (user && user.email === ADMIN_EMAIL) versionText += " (Super Admin)";
-
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
-                doc.text(versionText, 14, pageHeight - 10);
-                doc.text(`${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+                // >>> ส่วนที่แก้ไข: ลบ Version และ Credit ออก <<<
+                // เหลือแค่เลขหน้า
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
+            
             const d = new Date();
-            const fileNameStr = `my-budget-report_${d.getDate()}${d.getMonth()+1}${d.getFullYear()+543}.pdf`;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear() + 543;
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            
+            // >>> ส่วนที่แก้ไข: เปลี่ยน _ เป็น - คั่นระหว่างวันที่และเวลา <<<
+            const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             doc.save(fileNameStr);
+
         } catch (err) { console.error(err); alert(`Error: ${err.message}`); } 
         finally { btn.innerHTML = originalText; btn.disabled = false; }
     });
