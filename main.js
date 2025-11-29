@@ -1,6 +1,7 @@
-// --- main.js ---
+// --- main.js (v1.1.5 - เพิ่มฟังก์ชันลืมรหัสผ่าน) ---
 import { db } from "./firebase-config.js";
-// ⚠️ Import ให้ครบทุกตัว
+
+// ⚠️ Import เพิ่ม: sendPasswordResetEmail
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
@@ -11,7 +12,8 @@ import {
     browserSessionPersistence,
     deleteUser,
     reauthenticateWithCredential,
-    EmailAuthProvider
+    EmailAuthProvider,
+    sendPasswordResetEmail // <--- เพิ่มตัวนี้เข้ามา
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 
 import { 
@@ -23,29 +25,23 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.4", // Update Version
+    version: "v1.1.5", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
-// ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
-// ฟังก์ชันช่วย Reset Eye View (ปิดตา)
 function resetEyeView() {
     const passInput = document.getElementById('login-pass');
     const toggleIcon = document.getElementById('toggle-password');
-    
-    if (passInput) {
-        passInput.setAttribute('type', 'password'); // บังคับให้เป็น password (ซ่อน)
-    }
+    if (passInput) passInput.setAttribute('type', 'password');
     if (toggleIcon) {
-        toggleIcon.classList.remove('fa-eye-slash'); // เอาขีดฆ่าออก
-        toggleIcon.classList.add('fa-eye'); // ใส่รูปตาปกติ
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
     }
 }
 
-// ฟังก์ชันแปลงตัวเลข
 function formatNumber(n) { 
     if (n === undefined || n === null || isNaN(n)) return "0.00";
     return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
@@ -91,7 +87,6 @@ let unsubscribe = null;
 const auth = getAuth();
 let isRegisterMode = false;
 
-// ตั้งค่าให้ปิดเว็บแล้ว Logout ทันที
 setPersistence(auth, browserSessionPersistence)
   .then(() => console.log("Session Persistence: ON"))
   .catch((error) => console.error("Persistence Error:", error));
@@ -101,7 +96,6 @@ setPersistence(auth, browserSessionPersistence)
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ใส่เครดิตหน้าเว็บ
     const fCred = document.getElementById('footer-credit');
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
@@ -116,14 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const fVer = document.getElementById('footer-version');
 
         if (user) {
-            // Login แล้ว
             loginSection.style.display = 'none';
             dashboardSection.style.display = 'flex';
             footer.style.display = 'flex';
-            
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
-            // เช็ก Admin เพื่อโชว์ปุ่มจัดการ
             let versionText = APP_INFO.version;
             if (user.email === ADMIN_EMAIL) {
                 versionText += " (Super Admin)";
@@ -143,7 +134,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchWeather();
             setupExportPDF();
         } else {
-            // ยังไม่ Login หรือ Logout แล้ว
             loginSection.style.display = 'block';
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
@@ -154,11 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
             allRecords = [];
             recordsCol = null;
 
-            // สั่งล้างช่อง Input และปิดตา ทุกครั้งที่สถานะเป็น Logout
             if(document.getElementById('login-email')) document.getElementById('login-email').value = "";
             if(document.getElementById('login-pass')) document.getElementById('login-pass').value = "";
             if(document.getElementById('login-error')) document.getElementById('login-error').innerText = "";
-            resetEyeView(); // เรียกฟังก์ชันปิดตา
+            resetEyeView(); 
         }
     });
 
@@ -188,7 +177,7 @@ function setupAuthListeners() {
     const emailInput = document.getElementById('login-email');
     const passInput = document.getElementById('login-pass');
 
-    // ฟังก์ชันปุ่ม Reset (ยางลบ)
+    // ปุ่ม Reset (ยางลบ)
     const btnResetLogin = document.getElementById('btn-reset-login');
     if (btnResetLogin) {
         btnResetLogin.addEventListener('click', () => {
@@ -196,21 +185,42 @@ function setupAuthListeners() {
             passInput.value = "";
             errDiv.innerText = "";
             emailInput.focus();
-            resetEyeView(); // บังคับปิดตาเมื่อกด Reset
+            resetEyeView();
         });
     }
 
-    // 1. สลับโหมด
+    // >>> [NEW] ปุ่มลืมรหัสผ่าน (Forgot Password) <<<
+    const btnForgot = document.getElementById('btn-forgot-pass');
+    if (btnForgot) {
+        btnForgot.addEventListener('click', async () => {
+            const email = emailInput.value;
+            if (!email) {
+                alert("⚠️ กรุณากรอก 'อีเมล' ในช่องด้านบน เพื่อรับลิงก์รีเซ็ตรหัสผ่านครับ");
+                emailInput.focus();
+                return;
+            }
+            if(confirm(`ต้องการส่งลิงก์รีเซ็ตรหัสผ่านไปยัง: ${email} ใช่หรือไม่?`)) {
+                try {
+                    await sendPasswordResetEmail(auth, email);
+                    alert(`✅ ส่งลิงก์เรียบร้อยแล้ว!\nกรุณาตรวจสอบ Email (รวมถึงใน Junk/Spam)\nเพื่อตั้งรหัสผ่านใหม่ครับ`);
+                } catch (error) {
+                    console.error(error);
+                    let msg = "ส่งไม่สำเร็จ: " + error.message;
+                    if (error.code === 'auth/user-not-found') msg = "ไม่พบอีเมลนี้ในระบบ";
+                    else if (error.code === 'auth/invalid-email') msg = "รูปแบบอีเมลไม่ถูกต้อง";
+                    alert(msg);
+                }
+            }
+        });
+    }
+
+    // สลับโหมด
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             isRegisterMode = !isRegisterMode; 
             errDiv.innerText = ""; 
-            
-            // ล้างค่า
             emailInput.value = "";
             passInput.value = "";
-
-            // Reset Eye View เมื่อสลับโหมด
             resetEyeView(); 
 
             if (isRegisterMode) {
@@ -219,12 +229,16 @@ function setupAuthListeners() {
                 switchText.innerText = "มีบัญชีอยู่แล้ว?";
                 switchBtn.innerText = "เข้าสู่ระบบ";
                 authBtn.style.background = "#10b981"; 
+                // ซ่อนปุ่มลืมรหัสผ่านตอนสมัครสมาชิก
+                if(btnForgot) btnForgot.parentElement.style.display = 'none';
             } else {
                 authTitle.innerText = "เข้าสู่ระบบ";
                 authBtn.innerText = "เข้าใช้งาน";
                 switchText.innerText = "ยังไม่มีบัญชี?";
                 switchBtn.innerText = "สมัครสมาชิก";
                 authBtn.style.background = "var(--primary)"; 
+                // โชว์ปุ่มลืมรหัสผ่านตอน Login
+                if(btnForgot) btnForgot.parentElement.style.display = 'block';
             }
         });
     }
@@ -255,61 +269,47 @@ function setupAuthListeners() {
         });
     }
 
-    // 2. Logout
+    // Logout
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if(confirm("ออกจากระบบ?")) {
-                signOut(auth).then(() => {
-                    console.log("Logged out");
-                });
+                signOut(auth).then(() => console.log("Logged out"));
             }
         });
     }
 
-    // 3. Delete Account
+    // Delete Account
     const deleteAccBtn = document.getElementById('btn-delete-account');
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
             const confirmMsg = prompt("⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้!\nหากต้องการลบ พิมพ์คำว่า 'DELETE' ในช่องข้างล่าง:");
-            
             if (confirmMsg === 'DELETE') {
                 const user = auth.currentUser;
                 if (!user) return;
-
                 try {
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบ...';
                     deleteAccBtn.disabled = true;
-                    
                     if (recordsCol) {
                         const snapshot = await getDocs(recordsCol);
                         if (!snapshot.empty) {
-                            const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-                            await Promise.all(deletePromises);
+                            await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
                         }
                     }
-
                     await deleteUser(user);
                     alert("ลบบัญชีเรียบร้อยแล้ว");
-
                 } catch (error) {
                     console.error("Delete Error:", error);
-                    
                     if (error.code === 'auth/requires-recent-login') {
                         const password = prompt("เพื่อความปลอดภัย กรุณากรอกรหัสผ่านเพื่อยืนยันการลบ:");
                         if (password) {
                             try {
-                                const credential = EmailAuthProvider.credential(user.email, password);
-                                await reauthenticateWithCredential(user, credential);
+                                await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
                                 await deleteUser(user);
                                 alert("ลบบัญชีเรียบร้อยแล้ว");
-                            } catch (reAuthErr) {
-                                alert("รหัสผ่านไม่ถูกต้อง หรือเกิดข้อผิดพลาด: " + reAuthErr.message);
-                            }
+                            } catch (reAuthErr) { alert("รหัสผ่านไม่ถูกต้อง หรือเกิดข้อผิดพลาด: " + reAuthErr.message); }
                         }
-                    } else {
-                        alert("เกิดข้อผิดพลาด: " + error.message);
-                    }
+                    } else { alert("เกิดข้อผิดพลาด: " + error.message); }
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
                     deleteAccBtn.disabled = false;
                 }
@@ -329,11 +329,10 @@ function setupAuthListeners() {
     }
 }
 
-// --- Data Management ---
+// --- Data Management & Other Features (Same as v1.1.4) ---
 function subscribeToFirestore() {
     if (!recordsCol) return;
     if (unsubscribe) unsubscribe();
-    
     const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
     unsubscribe = onSnapshot(q, (snapshot) => {
         allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -408,7 +407,6 @@ function renderCategoryChips() {
     });
 }
 
-// --- Features ---
 function startClock() {
     const updateTime = () => {
         const now = new Date();
@@ -451,7 +449,6 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -520,7 +517,6 @@ function setupExportPDF() {
     });
 }
 
-// --- Render & Filters ---
 window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
@@ -640,17 +636,13 @@ function setupEventListeners() {
         form.addEventListener("submit", (e)=>{
             e.preventDefault();
             if(selectedCategories.length===0){ alert("เลือกหมวดหมู่ก่อนครับ"); return; }
-            
-            // เช็กรายรับรวม
             const incomeVal = parseFloat(inc.value) || 0;
             const expenseVal = parseFloat(exp.value) || 0;
             const currentTotalIncome = allRecords.reduce((sum, r) => sum + (Number(r.income) || 0), 0);
             
             if (expenseVal > 0 && currentTotalIncome <= 0) {
                 alert("⚠️ ไม่สามารถบันทึกรายจ่ายได้ เนื่องจากยอดรายรับรวมยังเป็น 0 ครับ \nกรุณาบันทึกรายรับก่อนครับ");
-                
-                // >>> [UPDATE Fix 3] เคลียร์ข้อมูลทั้งฟอร์ม (รีเซ็ตทุกอย่าง) <<<
-                form.reset(); // คำสั่งนี้จะไปเรียก Event Listener 'reset' ด้านล่างให้ทำงานอัตโนมัติ
+                form.reset(); 
                 return;
             }
 
@@ -663,16 +655,14 @@ function setupEventListeners() {
             document.getElementById("date").valueAsDate=new Date(); inc.disabled=false; exp.disabled=false;
         });
         
-        // ฟังก์ชัน Reset มาตรฐาน (ทำงานเมื่อกดปุ่มล้างค่า หรือถูกเรียกจาก form.reset())
         form.addEventListener("reset", ()=>{ 
             editingId=null; resetSubmitButton(); 
-            // ใช้ setTimeout เพื่อให้ form.reset() ของ browser ทำงานเสร็จก่อน แล้วเราค่อย override ค่าบางอย่างกลับ
             setTimeout(()=>{ 
                 inc.disabled=false; 
                 exp.disabled=false; 
                 selectedCategories=[]; 
                 renderCategoryChips(); 
-                document.getElementById("date").valueAsDate=new Date(); // ตั้งวันที่กลับเป็นวันนี้
+                document.getElementById("date").valueAsDate=new Date(); 
             },0); 
         });
     }
