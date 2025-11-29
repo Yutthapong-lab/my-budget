@@ -113,15 +113,26 @@ function setupExportPDF() {
             
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
-            const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
-            const tableRows = filteredRecords.map(r => [
-                formatThaiDate(r.date), // ใช้ฟังก์ชันแปลงวันที่ใน PDF ด้วย
-                r.item, 
-                r.income > 0 ? r.income.toFixed(2) : "-", 
-                r.expense > 0 ? r.expense.toFixed(2) : "-",
-                Array.isArray(r.category) ? r.category.join(", ") : r.category,
-                r.method
-            ]);
+            // >>> เพิ่มคอลัมน์ "Time" <<<
+            const tableColumn = ["Date", "Time", "Item", "Income", "Expense", "Category", "Method"];
+            
+            const tableRows = filteredRecords.map(r => {
+                // คำนวณเวลา (เหมือนในหน้าเว็บ)
+                let timeStr = "";
+                if (r.createdAt) {
+                    timeStr = new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) + " น.";
+                }
+
+                return [
+                    formatThaiDate(r.date),
+                    timeStr, // ใส่เวลาลงไปในคอลัมน์ที่ 2
+                    r.item, 
+                    r.income > 0 ? r.income.toFixed(2) : "-", 
+                    r.expense > 0 ? r.expense.toFixed(2) : "-",
+                    Array.isArray(r.category) ? r.category.join(", ") : r.category,
+                    r.method
+                ];
+            });
 
             doc.autoTable({ 
                 head: [tableColumn], 
@@ -145,7 +156,7 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
+            const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             
             doc.save(fileNameStr);
             
@@ -270,10 +281,9 @@ function renderList() {
     }
 
     displayItems.forEach(r => {
-        // จัดการวันที่และเวลา
         const thaiDate = formatThaiDate(r.date);
         let timeStr = r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : "";
-        if(timeStr) timeStr += " น."; // เพิ่มหน่วย น.
+        if(timeStr) timeStr += " น.";
 
         const cats = Array.isArray(r.category) ? r.category : [r.category];
         const catHtml = cats.map(c => {
@@ -285,7 +295,8 @@ function renderList() {
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td style="text-align:center;"> <div style="font-weight:600;">${thaiDate}</div>
+            <td style="text-align:center;">
+                <div style="font-weight:600;">${thaiDate}</div>
                 <div style="font-size:12px; color:#94a3b8;">${timeStr}</div>
             </td>
             <td>
@@ -360,4 +371,3 @@ function setupEventListeners() {
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
-
