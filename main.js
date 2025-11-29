@@ -11,7 +11,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.3",
+    version: "v1.0.4",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -69,6 +69,7 @@ const auth = getAuth();
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Inject Footer
     const fVer = document.getElementById('footer-version');
     const fCred = document.getElementById('footer-credit');
     if(fVer) fVer.innerText = APP_INFO.version;
@@ -79,14 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
         const footer = document.getElementById('app-footer');
-        const userDisplay = document.getElementById('user-display'); // จุดแสดงชื่อ
+        const userDisplay = document.getElementById('user-display');
 
         if (user) {
             loginSection.style.display = 'none';
             dashboardSection.style.display = 'flex';
             footer.style.display = 'flex';
             
-            // >>> แสดงอีเมลผู้ใช้ <<<
             if (userDisplay) userDisplay.innerText = user.email || "User";
 
             // ชี้เป้าไปที่ห้องส่วนตัวของ User
@@ -139,6 +139,19 @@ function setupAuthListeners() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if(confirm("ออกจากระบบ?")) signOut(auth);
+        });
+    }
+
+    // >>> เพิ่มฟังก์ชัน Toggle Eye View ตรงนี้ <<<
+    const togglePassword = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('login-pass');
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            // สลับไอคอน
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
         });
     }
 }
