@@ -41,6 +41,15 @@
         cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
     }
     .login-btn:hover { background: #4f46e5; transform: scale(1.02); }
+    
+    /* ลิงก์สลับหน้า */
+    .auth-switch {
+        margin-top: 20px; font-size: 14px; color: #64748b;
+    }
+    .auth-switch a {
+        color: var(--primary); text-decoration: none; font-weight: 700; cursor: pointer;
+    }
+    .auth-switch a:hover { text-decoration: underline; }
 
     /* Dashboard Container */
     .glass-container {
@@ -139,16 +148,23 @@
 
   <div id="login-section" class="login-container">
       <div class="login-logo"><i class="fa-solid fa-piggy-bank fa-bounce icon-piggy"></i></div>
-      <div class="login-title">เข้าสู่ระบบ</div>
+      <div class="login-title" id="auth-title">เข้าสู่ระบบ</div>
+      
       <form id="login-form" style="display:flex; flex-direction:column; gap:15px;">
           <input type="email" id="login-email" class="std-input" placeholder="อีเมล" required>
           <div style="position: relative;">
               <input type="password" id="login-pass" class="std-input" placeholder="รหัสผ่าน" required style="padding-right: 40px;">
               <i id="toggle-password" class="fa-solid fa-eye" style="position: absolute; right: 15px; top: 38%; cursor: pointer; color: #94a3b8;"></i>
           </div>
-          <button type="submit" class="login-btn">เข้าใช้งาน</button>
+          <button type="submit" id="auth-btn" class="login-btn">เข้าใช้งาน</button>
       </form>
+      
       <div id="login-error" style="color:red; font-size:13px; margin-top:10px;"></div>
+      
+      <div class="auth-switch">
+          <span id="auth-switch-text">ยังไม่มีบัญชี?</span> 
+          <a id="auth-switch-btn">สมัครสมาชิก</a>
+      </div>
   </div>
 
   <div id="dashboard-section" class="glass-container">
