@@ -226,8 +226,15 @@
     deleteDoc,
     doc,
     serverTimestamp,
-    updateDoc
+    updateDoc,
+    // >>> Import เพิ่ม <<<
+    query,
+    where
   } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
+  // >>> Import Auth เพื่อหา User ID <<<
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+  const auth = getAuth();
 
   const categoriesCol = collection(db, "categories");
   const methodsCol = collection(db, "methods");
@@ -254,12 +261,59 @@
     );
   }
 
+  // >>> ฟังก์ชันอัปเดตชื่อหมวดหมู่ในประวัติย้อนหลัง <<<
+  async function updateCategoryNameInHistory(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return;
+
+    // ต้องรอให้ Auth พร้อมก่อน
+    const user = auth.currentUser;
+    if (!user) return; // ถ้าไม่ได้ Login ก็ข้ามไป
+
+    const btn = document.querySelector(`.edit-cat-btn[data-name="${oldName}"]`);
+    const originalText = btn ? btn.textContent : "แก้ไข";
+    if(btn) {
+        btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> รอสักครู่...`;
+        btn.disabled = true;
+    }
+
+    try {
+        const recordsRef = collection(db, "users", user.uid, "records");
+        const q = query(recordsRef, where("category", "array-contains", oldName));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+            console.log(`[History] พบ ${snapshot.size} รายการที่ต้องแก้จาก "${oldName}" เป็น "${newName}"`);
+            
+            const updatePromises = snapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                let updatedCats;
+                // ถ้าเป็น array ให้ map เปลี่ยนชื่อ, ถ้าเป็น string ให้เปลี่ยนเลย
+                if (Array.isArray(data.category)) {
+                    updatedCats = data.category.map(c => c === oldName ? newName : c);
+                } else {
+                    updatedCats = data.category === oldName ? newName : data.category;
+                }
+                return updateDoc(docSnap.ref, { category: updatedCats });
+            });
+
+            await Promise.all(updatePromises);
+            console.log("[History] แก้ไขประวัติเรียบร้อยแล้ว");
+        }
+    } catch (error) {
+        console.error("เกิดข้อผิดพลาดในการแก้ประวัติ:", error);
+    } finally {
+        if(btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+  }
+
   // โหลดข้อมูลทั้งหมด
   async function loadMasterData() {
     // categories
     let catSnap = await getDocs(categoriesCol);
     if (catSnap.empty) {
-      // ถ้าไม่มีข้อมูล ให้สร้างค่าเริ่มต้น
       await Promise.all(
         DEFAULT_CATEGORIES.map(name =>
           addDoc(categoriesCol, { name, createdAt: serverTimestamp() })
@@ -291,7 +345,7 @@
     });
     sortThaiByName(methods);
 
-    // รีเซ็ตหน้า ถ้าหน้าปัจจุบันเกินจากหน้าสูงสุด
+    // รีเซ็ตหน้า
     const catMaxPage = Math.max(1, Math.ceil((categories.length || 1) / categoryPageSize));
     if (categoryPage > catMaxPage) categoryPage = catMaxPage;
 
@@ -347,8 +401,17 @@
                 const id = btn.dataset.id;
                 const oldName = btn.dataset.name;
                 const newName = prompt("แก้ไขชื่อหมวดหมู่", oldName);
-                if(newName && newName.trim()) {
-                    await updateDoc(doc(categoriesCol, id), { name: newName.trim() });
+                if(newName && newName.trim() && newName.trim() !== oldName) {
+                    const finalName = newName.trim();
+                    
+                    // 1. อัปเดตชื่อใน Master (Categories Collection)
+                    await updateDoc(doc(categoriesCol, id), { name: finalName });
+
+                    // 2. >>> เรียกฟังก์ชันอัปเดตประวัติย้อนหลัง <<<
+                    // (ทำแบบเงียบๆ หรือรอให้เสร็จก่อนโหลดหน้าใหม่ก็ได้)
+                    // ในที่นี้เราเรียกแล้วปล่อยให้ทำงาน (Fire and Forget) หรือจะใส่ await ก็ได้
+                    await updateCategoryNameInHistory(oldName, finalName);
+
                     await loadMasterData();
                 }
             });
@@ -364,7 +427,6 @@
         });
       }
 
-      // Update Controls UI
       if(catPageInfo) catPageInfo.textContent = `หน้า ${categoryPage} / ${Math.ceil(totalCat/categoryPageSize) || 1}`;
       if(catPrevBtn) catPrevBtn.disabled = categoryPage <= 1;
       if(catNextBtn) catNextBtn.disabled = categoryPage >= (Math.ceil(totalCat/categoryPageSize) || 1);
@@ -424,7 +486,16 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    loadMasterData();
+    // รอ Check Auth ก่อนโหลดข้อมูล (เผื่อต้องใช้ User ID)
+    onAuthStateChanged(auth, (user) => {
+        if(user) {
+            console.log("Admin logged in:", user.email);
+            loadMasterData();
+        } else {
+            // ถ้าไม่ได้ Login ให้เด้งกลับ หรือ โหลดแบบไม่มีสิทธิ์ (ในเคสนี้เราโหลด master data ให้เห็นได้ แต่แก้ประวัติไม่ได้)
+            loadMasterData();
+        }
+    });
 
     // ปุ่มเพิ่มหมวดหมู่
     const addCatBtn = document.getElementById("add-category");
