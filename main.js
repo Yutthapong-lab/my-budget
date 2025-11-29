@@ -1,6 +1,5 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
-// เพิ่ม import Auth
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
 from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 import { 
@@ -19,9 +18,13 @@ let filteredRecords = [];
 let currentPage = 1;
 let editingId = null;
 let selectedCategories = [];
-const recordsCol = collection(db, "records"); 
 let masterCategories = [];
-const auth = getAuth(); // เริ่มต้น Auth
+
+// ตัวแปรสำหรับเก็บ Collection ของ User คนปัจจุบัน (จะถูกกำหนดค่าตอน Login ผ่าน)
+let recordsCol = null; 
+let unsubscribe = null; // ตัวยกเลิกการฟังข้อมูล (เพื่อไม่ให้ฟังซ้ำซ้อน)
+
+const auth = getAuth();
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inject Footer
@@ -37,26 +40,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = document.getElementById('app-footer');
 
         if (user) {
-            // ถ้า Login แล้ว -> โชว์ Dashboard ซ่อน Login
+            // 1. Login สำเร็จ -> โชว์ Dashboard
             loginSection.style.display = 'none';
-            dashboardSection.style.display = 'flex'; // แสดงแบบ Flex (เพราะเรา set css ไว้)
+            dashboardSection.style.display = 'flex'; 
             footer.style.display = 'flex';
             
-            // เริ่มโหลดข้อมูลต่างๆ
+            // 2. >>> จุดสำคัญ: เปลี่ยนเป้าหมายไปที่ห้องส่วนตัวของ User คนนี้ <<<
+            // Path: users / [UID] / records
+            recordsCol = collection(db, "users", user.uid, "records");
+
+            // 3. โหลดข้อมูล
             await loadMasterData();
             const dateInput = document.getElementById('date');
             if(dateInput) dateInput.valueAsDate = new Date();
             
-            subscribeToFirestore(); // เริ่มฟังข้อมูลจาก DB
+            subscribeToFirestore(); // เริ่มดึงข้อมูลจากห้องส่วนตัว
             startClock();
             fetchWeather();
             setupExportPDF();
             
         } else {
-            // ถ้ายังไม่ Login -> โชว์ Login ซ่อน Dashboard
+            // Logout หรือยังไม่ Login
             loginSection.style.display = 'block';
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
+            
+            // ยกเลิกการฟังข้อมูลเก่า (ถ้ามี)
+            if(unsubscribe) unsubscribe();
+            allRecords = [];
+            recordsCol = null;
         }
     });
 
@@ -66,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Auth Logic ---
 function setupAuthListeners() {
-    // Login Form
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -78,7 +89,6 @@ function setupAuthListeners() {
             
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
-                // ถ้าผ่าน onAuthStateChanged จะทำงานเอง
                 errDiv.innerText = "";
             } catch (error) {
                 console.error(error);
@@ -87,16 +97,58 @@ function setupAuthListeners() {
         });
     }
 
-    // Logout Button
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            signOut(auth);
+            if(confirm("ต้องการออกจากระบบ?")) {
+                signOut(auth);
+            }
         });
     }
 }
 
-// --- Widgets ---
+// --- Logic การดึงข้อมูล (CRUD) ---
+function subscribeToFirestore() {
+    if (!recordsCol) return; // ถ้ายังไม่ Login ไม่ต้องทำอะไร
+
+    // ยกเลิกการฟังอันเก่าก่อน (เพื่อป้องกัน Memory Leak)
+    if (unsubscribe) unsubscribe();
+
+    const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
+    
+    unsubscribe = onSnapshot(q, (snapshot) => {
+        allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        applyFilters(); 
+    }, (error) => {
+        console.error("Error fetching data:", error);
+        // กรณี Permission Denied (เช่น กฎผิด) จะไม่พังทั้งหน้า แต่จะแจ้งเตือนใน Console
+    });
+}
+
+async function saveRecord(rec) {
+    if (!recordsCol) return alert("กรุณาเข้าสู่ระบบก่อน");
+    try {
+        if (editingId) { 
+            // แก้ไขข้อมูลใน Path ของ User นั้นๆ
+            await updateDoc(doc(recordsCol, editingId), rec); 
+            editingId = null; 
+            resetSubmitButton(); 
+        } else { 
+            rec.createdAt = serverTimestamp(); 
+            await addDoc(recordsCol, rec); 
+        }
+    } catch (err) { 
+        console.error(err);
+        alert("บันทึกไม่สำเร็จ: " + err.message); 
+    }
+}
+
+window.deleteRecord = async function(id) {
+    if (!recordsCol) return;
+    if(confirm("ลบรายการนี้?")) await deleteDoc(doc(recordsCol, id));
+}
+
+// --- Widgets & Others (เหมือนเดิม) ---
 function startClock() {
     const updateTime = () => {
         const now = new Date();
@@ -113,14 +165,12 @@ function fetchWeather() {
         document.getElementById('temp-val').innerText = temp;
         document.getElementById('location-name').innerText = locName;
     }
-
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async (pos) => {
             try {
                 const { latitude: lat, longitude: lon } = pos.coords;
                 const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
                 const weatherData = await weatherRes.json();
-
                 let locationName = "ตำแหน่งปัจจุบัน";
                 try {
                     const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&accept-language=th`);
@@ -133,7 +183,6 @@ function fetchWeather() {
                         else if (province) locationName = province;
                     }
                 } catch (geoErr) { console.warn(geoErr); }
-
                 if(weatherData.current_weather) {
                     updateUI(weatherData.current_weather.temperature, weatherData.current_weather.weathercode, locationName);
                 }
@@ -142,7 +191,6 @@ function fetchWeather() {
     }
 }
 
-// --- Helper Date ---
 function formatThaiDate(dateString) {
     if (!dateString) return "-";
     const [y, m, d] = dateString.split('-');
@@ -150,11 +198,9 @@ function formatThaiDate(dateString) {
     return `${d}/${m}/${thaiYear}`;
 }
 
-// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
-
     const arrayBufferToBase64 = (buffer) => {
         let binary = '';
         const bytes = new Uint8Array(buffer);
@@ -162,33 +208,27 @@ function setupExportPDF() {
         for (let i = 0; i < len; i++) { binary += String.fromCharCode(bytes[i]); }
         return window.btoa(binary);
     };
-    
     btn.addEventListener('click', async () => {
         const originalText = btn.innerHTML;
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลด...`;
         btn.disabled = true;
-        
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const fontUrl = 'https://cdn.jsdelivr.net/gh/cadsondemak/Sarabun@master/fonts/Sarabun-Regular.ttf';
             const response = await fetch(fontUrl);
             if (!response.ok) throw new Error(`โหลดฟอนต์ไม่สำเร็จ`);
-            
             const fontBuffer = await response.arrayBuffer();
             const fontBase64 = arrayBufferToBase64(fontBuffer);
             doc.addFileToVFS("Sarabun.ttf", fontBase64);
             doc.addFont("Sarabun.ttf", "Sarabun", "normal");
             doc.setFont("Sarabun"); 
-            
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> สร้าง PDF...`;
-
             doc.setFontSize(18); 
             doc.text("My Budget Report", 14, 22);
             doc.setFontSize(10); 
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
-
             const tableColumn = ["Date / Time", "Item", "Income", "Expense", "Category", "Method"];
             const tableRows = filteredRecords.map(r => {
                 let timeStr = "";
@@ -196,57 +236,34 @@ function setupExportPDF() {
                 const dateTimeStr = `${formatThaiDate(r.date)}\n${timeStr}`;
                 return [dateTimeStr, r.item, r.income>0?r.income.toFixed(2):"-", r.expense>0?r.expense.toFixed(2):"-", Array.isArray(r.category)?r.category.join(", "):r.category, r.method];
             });
-
             doc.autoTable({ 
                 head: [tableColumn], body: tableRows, startY: 40,
                 styles: { font: 'Sarabun', fontStyle: 'normal', valign: 'middle' },
                 headStyles: { fillColor: [99, 102, 241], font: 'Sarabun', halign: 'center' },
                 columnStyles: { 0: { halign: 'center' } } 
             });
-
             const pageCount = doc.internal.getNumberOfPages();
             const pageWidth = doc.internal.pageSize.width;
             const pageHeight = doc.internal.pageSize.height;
             doc.setFontSize(8); doc.setTextColor(100); 
-
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
                 doc.text(APP_INFO.version, 14, pageHeight - 10);
                 doc.text(`${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
-
             const d = new Date();
             const fileNameStr = `my-budget_${d.getDate()}${d.getMonth()+1}${d.getFullYear()+543}.pdf`;
             doc.save(fileNameStr);
-            
         } catch (err) { console.error(err); alert(`Error: ${err.message}`); } 
         finally { btn.innerHTML = originalText; btn.disabled = false; }
     });
 }
 
-// --- Logic ---
 function getColorForCategory(name) {
     const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
     return palettes[name.charCodeAt(0) % palettes.length];
 }
-
-function subscribeToFirestore() {
-    const q = query(recordsCol, orderBy("date", "desc"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-        allRecords = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        applyFilters(); 
-    });
-}
-
-async function saveRecord(rec) {
-    try {
-        if (editingId) { await updateDoc(doc(db, "records", editingId), rec); editingId = null; resetSubmitButton(); }
-        else { rec.createdAt = serverTimestamp(); await addDoc(recordsCol, rec); }
-    } catch (err) { alert(err.message); }
-}
-
-window.deleteRecord = async function(id) { if(confirm("ลบรายการนี้?")) await deleteDoc(doc(db, "records", id)); }
 
 window.editRecord = function(id) {
     const rec = allRecords.find(r => r.id === id);
@@ -376,18 +393,6 @@ function renderList() {
         <button onclick="window.changePage(1)" ${currentPage >= totalPages ? 'disabled' : ''} style="padding:4px 10px; cursor:pointer; background:#fff; border:1px solid #e2e8f0; border-radius:4px;"><i class="fa-solid fa-chevron-right"></i></button>`;
 }
 
-function updateSummary() {
-    const inc = filteredRecords.reduce((s,r)=>s+(parseFloat(r.income)||0),0);
-    const exp = filteredRecords.reduce((s,r)=>s+(parseFloat(r.expense)||0),0);
-    document.getElementById("sum-income").innerText = formatNumber(inc);
-    document.getElementById("sum-expense").innerText = formatNumber(exp);
-    const net = inc - exp;
-    const netEl = document.getElementById("sum-net");
-    netEl.innerText = formatNumber(net);
-    netEl.style.color = net >= 0 ? '#2563eb' : '#b91c1c';
-}
-
-function formatNumber(n) { return Number(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function toggleInputState(active, passive) {
     if (active.value && parseFloat(active.value)>0) { passive.value=""; passive.disabled=true; } else { passive.disabled=false; }
 }
