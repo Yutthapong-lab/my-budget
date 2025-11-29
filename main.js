@@ -1,7 +1,16 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } 
-from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged, 
+    setPersistence, 
+    browserSessionPersistence,
+    deleteUser 
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+
 import { 
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
@@ -11,7 +20,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.9", 
+    version: "v1.0.9", // (User ทั่วไปเห็นแค่ v1.0.9, Admin เห็น Super Admin)
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -139,6 +148,7 @@ function checkAdminAccess() {
     }
 }
 
+// --- Auth System ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
     const switchBtn = document.getElementById('auth-switch-btn');
@@ -199,32 +209,45 @@ function setupAuthListeners() {
         });
     }
 
-    const requestDeleteBtn = document.getElementById('btn-request-delete');
-    if (requestDeleteBtn) {
-        requestDeleteBtn.addEventListener('click', async () => {
-            if (!confirm("คุณต้องการส่งคำขอให้ Admin ลบบัญชีของคุณใช่หรือไม่?\n(ข้อมูลจะถูกลบหลังจาก Admin ดำเนินการ)")) {
-                return;
-            }
-            const user = auth.currentUser;
-            if (!user) return;
-            const reason = prompt("โปรดระบุเหตุผลที่ต้องการลบ (ไม่บังคับ):", "-");
+    // >>> ลบบัญชีถาวร (Delete Permanently) <<<
+    const deleteAccBtn = document.getElementById('btn-delete-account');
+    if (deleteAccBtn) {
+        deleteAccBtn.addEventListener('click', async () => {
+            const confirmMsg = prompt("⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้!\nหากต้องการลบ พิมพ์คำว่า 'DELETE' ในช่องข้างล่าง:");
+            
+            if (confirmMsg === 'DELETE') {
+                const user = auth.currentUser;
+                if (!user) return;
 
-            try {
-                requestDeleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่ง...';
-                await addDoc(collection(db, "deletion_requests"), {
-                    uid: user.uid,
-                    email: user.email,
-                    reason: reason || "ไม่ระบุ",
-                    status: "pending",
-                    requestDate: serverTimestamp()
-                });
-                alert("✅ ส่งคำขอเรียบร้อยแล้ว!\nเจ้าหน้าที่จะดำเนินการลบข้อมูลของคุณภายใน 24 ชม.");
-                requestDeleteBtn.innerHTML = '<i class="fa-solid fa-check"></i> ส่งเรื่องแล้ว';
-                requestDeleteBtn.disabled = true;
-            } catch (error) {
-                console.error("Error requesting deletion:", error);
-                alert("ส่งคำขอไม่สำเร็จ: " + error.message);
-                requestDeleteBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> แจ้งลบบัญชี';
+                try {
+                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบข้อมูล...';
+                    deleteAccBtn.disabled = true;
+                    
+                    // 1. ลบ Records ทั้งหมดก่อน
+                    if (recordsCol) {
+                        const snapshot = await getDocs(recordsCol);
+                        if (!snapshot.empty) {
+                            const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+                            await Promise.all(deletePromises);
+                        }
+                    }
+
+                    // 2. ลบ User
+                    await deleteUser(user);
+
+                    alert("ลบบัญชีและข้อมูลทั้งหมดเรียบร้อยแล้ว");
+                    // หน้าเว็บจะรีเฟรชเอง
+
+                } catch (error) {
+                    console.error("Delete Error:", error);
+                    if (error.code === 'auth/requires-recent-login') {
+                        alert("เพื่อความปลอดภัย กรุณา 'ออกจากระบบ' แล้ว 'เข้าสู่ระบบใหม่' อีกครั้ง \nจากนั้นค่อยกดลบบัญชีครับ");
+                    } else {
+                        alert("เกิดข้อผิดพลาด: " + error.message);
+                    }
+                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
+                    deleteAccBtn.disabled = false;
+                }
             }
         });
     }
@@ -241,6 +264,7 @@ function setupAuthListeners() {
     }
 }
 
+// --- Data Management ---
 function subscribeToFirestore() {
     if (!recordsCol) return;
     if (unsubscribe) unsubscribe();
@@ -319,6 +343,7 @@ function renderCategoryChips() {
     });
 }
 
+// --- Features ---
 function startClock() {
     const updateTime = () => {
         const now = new Date();
@@ -361,6 +386,7 @@ function fetchWeather() {
     }
 }
 
+// --- PDF Export ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -413,50 +439,33 @@ function setupExportPDF() {
                 doc.setPage(i);
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
-            
             const d = new Date();
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear() + 543;
-            const h = String(d.getHours()).padStart(2, '0');
-            const m = String(d.getMinutes()).padStart(2, '0');
-            const s = String(d.getSeconds()).padStart(2, '0');
-            
-            const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
+            const fileNameStr = `my-budget-report_${d.getDate()}_${d.getMonth()+1}_${d.getFullYear()+543}.pdf`;
             doc.save(fileNameStr);
-
         } catch (err) { console.error(err); alert(`Error: ${err.message}`); } 
         finally { btn.innerHTML = originalText; btn.disabled = false; }
     });
 }
 
-// --- Render & Filters (Updated Date Range) ---
+// --- Render & Filters ---
 window.changePage = function(delta) { currentPage += delta; renderList(); }
 
 function applyFilters() {
-    // 1. รับค่าจาก Date Picker 2 ช่อง
     const fStart = document.getElementById("filter-start")?.value;
     const fEnd = document.getElementById("filter-end")?.value;
-    
     const fCat = document.getElementById("filter-category")?.value;
     const fMethod = document.getElementById("filter-method")?.value;
     const fText = document.getElementById("filter-text")?.value.toLowerCase().trim();
 
     filteredRecords = allRecords.filter(r => {
-        // 2. Logic การกรองวันที่
         let isDateMatch = true;
-        if (fStart && fEnd) {
-            isDateMatch = r.date >= fStart && r.date <= fEnd;
-        } else if (fStart) {
-            isDateMatch = r.date >= fStart;
-        } else if (fEnd) {
-            isDateMatch = r.date <= fEnd;
-        }
+        if (fStart && fEnd) isDateMatch = r.date >= fStart && r.date <= fEnd;
+        else if (fStart) isDateMatch = r.date >= fStart;
+        else if (fEnd) isDateMatch = r.date <= fEnd;
 
         const mCat = fCat ? (Array.isArray(r.category) ? r.category.includes(fCat) : r.category===fCat) : true;
         const mMethod = fMethod ? r.method === fMethod : true;
         const mText = fText ? JSON.stringify(r).toLowerCase().includes(fText) : true;
-        
         return isDateMatch && mCat && mMethod && mText;
     });
     currentPage = 1; renderList(); updateSummary();
@@ -538,17 +547,6 @@ function renderList() {
     }
 }
 
-function updateSummary() {
-    const inc = filteredRecords.reduce((s,r)=>s+(parseFloat(r.income)||0),0);
-    const exp = filteredRecords.reduce((s,r)=>s+(parseFloat(r.expense)||0),0);
-    document.getElementById("sum-income").innerText = formatNumber(inc);
-    document.getElementById("sum-expense").innerText = formatNumber(exp);
-    const net = inc - exp;
-    const netEl = document.getElementById("sum-net");
-    netEl.innerText = formatNumber(net);
-    netEl.style.color = net >= 0 ? '#0284c7' : '#e11d48';
-}
-
 function setupEventListeners() {
     const form = document.getElementById("entry-form");
     const inc = document.getElementById("income"), exp = document.getElementById("expense");
@@ -575,16 +573,11 @@ function setupEventListeners() {
     if(ft) ft.addEventListener("input", applyFilters);
     document.querySelectorAll(".dropdown-filter").forEach(e=>e.addEventListener("change", applyFilters));
     document.getElementById("clear-filter")?.addEventListener("click", ()=>{
-        // Reset Date Range
-        document.getElementById("filter-start").value = "";
-        document.getElementById("filter-end").value = "";
-        
-        document.getElementById("filter-category").value="";
-        document.getElementById("filter-method").value=""; 
-        if(ft) ft.value=""; 
-        applyFilters();
+        document.getElementById("filter-start").value="";
+        document.getElementById("filter-end").value="";
+        document.getElementById("filter-month").value=""; document.getElementById("filter-category").value="";
+        document.getElementById("filter-method").value=""; if(ft) ft.value=""; applyFilters();
     });
-    // Add Event Listeners for Date Inputs
     document.getElementById("filter-start")?.addEventListener("change", applyFilters);
     document.getElementById("filter-end")?.addEventListener("change", applyFilters);
     
