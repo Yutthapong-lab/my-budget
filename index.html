@@ -12,7 +12,13 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <script>
+      window.jsPDF = window.jspdf.jsPDF;
+  </script>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  
   <script src="https://cdn.jsdelivr.net/npm/jspdf-font-th-sarabun@0.0.4/Sarabun-Regular-normal.js"></script>
 
   <style>
@@ -23,7 +29,7 @@
       --radius: 20px;
     }
 
-    /* บังคับฟอนต์ไทยเฉพาะส่วนที่เป็นข้อความ และ input เพื่อไม่ให้ทับไอคอน */
+    /* บังคับฟอนต์ไทยเฉพาะส่วน Text เพื่อไม่ให้ทับ Icon */
     body, input, select, button, textarea, div, span, h1, p, td, th {
        font-family: "Sarabun", sans-serif;
     }
@@ -35,8 +41,6 @@
       color: var(--text-main);
       min-height: 100vh;
       display: flex; justify-content: center; padding: 20px;
-      
-      /* Animated Background */
       background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
       background-size: 400% 400%;
       animation: gradientBG 15s ease infinite;
@@ -95,10 +99,7 @@
     .stat-info { display: flex; flex-direction: column; }
     .stat-label { font-size: 14px; color: var(--text-sub); margin-bottom: 6px; font-weight: 500; }
     .stat-val { font-size: 26px; font-weight: 700; line-height: 1; }
-    
-    .stat-icon-bg {
-        width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;
-    }
+    .stat-icon-bg { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
     .val-inc { color: #16a34a; }
     .bg-inc { background: #dcfce7; color: #16a34a; }
     .val-exp { color: #dc2626; }
