@@ -23,7 +23,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.3", // Update Version
+    version: "v1.1.4", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -188,7 +188,7 @@ function setupAuthListeners() {
     const emailInput = document.getElementById('login-email');
     const passInput = document.getElementById('login-pass');
 
-    // >>> [UPDATE Fix 1] ฟังก์ชันปุ่ม Reset (ยางลบ) <<<
+    // ฟังก์ชันปุ่ม Reset (ยางลบ)
     const btnResetLogin = document.getElementById('btn-reset-login');
     if (btnResetLogin) {
         btnResetLogin.addEventListener('click', () => {
@@ -210,8 +210,8 @@ function setupAuthListeners() {
             emailInput.value = "";
             passInput.value = "";
 
-            // >>> [UPDATE Fix 1] Reset Eye View เมื่อสลับโหมด <<<
-            resetEyeView(); // บังคับปิดตาเมื่อสลับโหมด
+            // Reset Eye View เมื่อสลับโหมด
+            resetEyeView(); 
 
             if (isRegisterMode) {
                 authTitle.innerText = "สมัครสมาชิกใหม่";
@@ -649,12 +649,8 @@ function setupEventListeners() {
             if (expenseVal > 0 && currentTotalIncome <= 0) {
                 alert("⚠️ ไม่สามารถบันทึกรายจ่ายได้ เนื่องจากยอดรายรับรวมยังเป็น 0 ครับ \nกรุณาบันทึกรายรับก่อนครับ");
                 
-                // >>> [UPDATE Fix 2] เคลียร์ข้อมูลและปลดล็อกช่องตัวเลข <<<
-                inc.value = "";
-                exp.value = "";
-                inc.disabled = false;
-                exp.disabled = false;
-                inc.focus(); // นำเคอร์เซอร์ไปช่องรายรับให้
+                // >>> [UPDATE Fix 3] เคลียร์ข้อมูลทั้งฟอร์ม (รีเซ็ตทุกอย่าง) <<<
+                form.reset(); // คำสั่งนี้จะไปเรียก Event Listener 'reset' ด้านล่างให้ทำงานอัตโนมัติ
                 return;
             }
 
@@ -666,9 +662,18 @@ function setupEventListeners() {
             form.reset(); selectedCategories=[]; renderCategoryChips(); 
             document.getElementById("date").valueAsDate=new Date(); inc.disabled=false; exp.disabled=false;
         });
+        
+        // ฟังก์ชัน Reset มาตรฐาน (ทำงานเมื่อกดปุ่มล้างค่า หรือถูกเรียกจาก form.reset())
         form.addEventListener("reset", ()=>{ 
             editingId=null; resetSubmitButton(); 
-            setTimeout(()=>{ inc.disabled=false; exp.disabled=false; selectedCategories=[]; renderCategoryChips(); document.getElementById("date").valueAsDate=new Date(); },0); 
+            // ใช้ setTimeout เพื่อให้ form.reset() ของ browser ทำงานเสร็จก่อน แล้วเราค่อย override ค่าบางอย่างกลับ
+            setTimeout(()=>{ 
+                inc.disabled=false; 
+                exp.disabled=false; 
+                selectedCategories=[]; 
+                renderCategoryChips(); 
+                document.getElementById("date").valueAsDate=new Date(); // ตั้งวันที่กลับเป็นวันนี้
+            },0); 
         });
     }
     const ft = document.getElementById("filter-text");
