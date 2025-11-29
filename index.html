@@ -2,42 +2,55 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>My Budget - Dashboard</title>
+  <title>My Budget - Premium Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
   <style>
     :root {
-      --primary: #4f46e5;
+      --primary: #6366f1;
       --text-main: #1e293b;
       --text-sub: #64748b;
-      --bg-body: #f8fafc;
-      --glass-bg: #ffffff;
-      --radius: 16px;
+      --radius: 20px;
     }
 
     * { box-sizing: border-box; outline: none; font-family: "Sarabun", sans-serif !important; }
 
+    /* 3. Background Animation (เพิ่มใหม่) */
     body {
       margin: 0; padding: 0;
       color: var(--text-main);
       min-height: 100vh;
-      background: var(--bg-body);
       display: flex; justify-content: center; padding: 20px;
+      
+      /* สีพื้นหลังแบบไล่เฉดเคลื่อนไหว */
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
     .glass-container {
       width: 98%;
       max-width: 1800px;
-      background: var(--glass-bg);
+      /* ปรับให้เป็นสีขาวโปร่งแสงเล็กน้อย (Glassmorphism) */
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
       border-radius: var(--radius);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
       padding: 30px;
       display: flex; flex-direction: column; gap: 24px;
       min-height: 95vh;
@@ -48,62 +61,81 @@
         display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;
         margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px;
     }
-    .brand-section h1 { margin: 0; font-size: 28px; color: var(--primary); font-weight: 700; }
+    .brand-section h1 { margin: 0; font-size: 28px; color: var(--primary); font-weight: 800; }
+    .brand-section p { margin: 4px 0 0; color: var(--text-sub); font-size: 14px; }
     
     .live-info-card {
         display: flex; gap: 20px; align-items: center;
-        background: #f1f5f9; padding: 10px 20px; border-radius: 12px;
+        background: #f8fafc; padding: 10px 24px; border-radius: 12px;
         border: 1px solid #e2e8f0;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
     }
     .info-item { display: flex; flex-direction: column; align-items: flex-end; }
-    .info-label { font-size: 12px; color: var(--text-sub); font-weight: 500; }
-    .info-value { font-size: 16px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-    .weather-icon { font-size: 20px; }
-
-    /* Layout Grid */
+    .info-label { font-size: 11px; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-value { font-size: 16px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    
+    /* Grid Layout */
     .dashboard-grid {
-        display: grid; grid-template-columns: 350px 1fr; gap: 24px; align-items: start;
+        display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;
     }
     .left-panel { display: flex; flex-direction: column; gap: 24px; }
     .right-panel { display: flex; flex-direction: column; gap: 24px; flex: 1; min-width: 0; }
 
-    /* Stats */
-    .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; width: 100%; }
+    /* Stats Boxes with Icons */
+    .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; width: 100%; }
     .stat-box {
-      background: #fff; padding: 20px; border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;
-      display: flex; flex-direction: column; justify-content: center;
+      background: #fff; padding: 24px; border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .stat-label { font-size: 14px; color: var(--text-sub); margin-bottom: 8px; }
+    .stat-info { display: flex; flex-direction: column; }
+    .stat-label { font-size: 14px; color: var(--text-sub); margin-bottom: 6px; font-weight: 500; }
     .stat-val { font-size: 26px; font-weight: 700; line-height: 1; }
-    .val-inc { color: #15803d; }
-    .val-exp { color: #b91c1c; }
+    
+    .stat-icon-bg {
+        width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;
+    }
+    
+    .val-inc { color: #16a34a; }
+    .bg-inc { background: #dcfce7; color: #16a34a; }
+    
+    .val-exp { color: #dc2626; }
+    .bg-exp { background: #fee2e2; color: #dc2626; }
+    
     .val-net { color: #2563eb; }
+    .bg-net { background: #dbeafe; color: #2563eb; }
 
     /* Form */
-    .form-card { background: #fff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .section-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .setting-link { font-size: 12px; color: var(--primary); text-decoration: none; background: #e0e7ff; padding: 6px 12px; border-radius: 6px; }
+    .form-card { background: #fff; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
+    .section-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; color: #334155; }
+    .setting-link { font-size: 12px; color: var(--primary); text-decoration: none; background: #eef2ff; padding: 6px 12px; border-radius: 6px; font-weight: 600; display: flex; align-items: center; gap: 5px; transition: 0.2s;}
+    .setting-link:hover { background: #e0e7ff; }
 
     .form-layout { display: flex; flex-direction: column; gap: 16px; }
-    .lbl { font-size: 14px; font-weight: 500; color: #334155; }
+    .lbl { font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 4px; display: block; }
     .std-input {
-      width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1;
-      background: #f8fafc; font-size: 14px;
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1;
+      background: #f8fafc; font-size: 14px; transition: 0.2s;
     }
+    .std-input:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
+
     .category-container {
-      display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; 
-      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; min-height: 46px;
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; 
+      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; min-height: 50px;
     }
     .cat-chip-btn {
-      border: 1px solid #cbd5e1; background: #fff; color: #475569;
-      padding: 5px 12px; border-radius: 50px; font-size: 13px; cursor: pointer; transition: 0.2s;
+      border: 1px solid #cbd5e1; background: #fff; color: #64748b;
+      padding: 6px 14px; border-radius: 50px; font-size: 13px; cursor: pointer; transition: 0.2s; font-weight: 500;
+      display: flex; align-items: center; gap: 6px;
     }
+    .cat-chip-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .cat-chip-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     
-    .btn-main { background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; transition: background 0.2s; }
-    .btn-main:hover { background: #4338ca; }
-    .btn-sec { background: #fff; border: 1px solid #cbd5e1; color: #475569; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
+    .btn-main { background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-main:hover { background: #4f46e5; box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4); }
+    
+    .btn-sec { background: #fff; border: 1px solid #cbd5e1; color: #475569; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+    .btn-sec:hover { background: #f1f5f9; }
 
     /* Table */
     .table-card { background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; height: 100%; display: flex; flex-direction: column; }
@@ -113,28 +145,29 @@
     
     .btn-pdf {
         background: #ef4444; color: #fff; border: none; padding: 8px 16px; border-radius: 8px;
-        font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
+        font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;
     }
+    .btn-pdf:hover { background: #dc2626; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.4); }
 
     .table-wrapper { overflow: auto; flex: 1; }
     table { width: 100%; border-collapse: collapse; min-width: 900px; }
     thead { position: sticky; top: 0; background: #f8fafc; z-index: 10; }
-    th { text-align: left; padding: 16px; color: #64748b; font-size: 13px; font-weight: 600; border-bottom: 1px solid #e2e8f0; }
+    th { text-align: left; padding: 16px; color: #64748b; font-size: 13px; font-weight: 600; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; letter-spacing: 0.5px; }
     td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
     tr:hover { background-color: #f8fafc; }
 
-    .tag-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background: #f1f5f9; color: #475569; margin-right: 4px; margin-bottom: 4px;}
+    .tag-badge { display: inline-flex; align-items: center; gap:4px; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; background: #f1f5f9; color: #475569; margin-right: 4px; margin-bottom: 4px;}
 
     .method-pill {
-        display: inline-block;
+        display: inline-flex; align-items: center; gap: 5px;
         white-space: nowrap;
         padding: 4px 12px;
         border-radius: 50px;
         border: 1px solid #e2e8f0;
-        background: #f1f5f9;
+        background: #f8fafc;
         color: #334155;
         font-size: 12px;
-        font-weight: 500;
+        font-weight: 600;
         vertical-align: middle;
     }
 
@@ -151,14 +184,14 @@
     
     <header class="top-bar">
       <div class="brand-section">
-        <h1>My Budget Dashboard</h1>
-        <p>ระบบจัดการรายรับ-รายจ่ายส่วนตัว</p>
+        <h1><i class="fa-solid fa-chart-pie" style="color:var(--primary); margin-right:8px;"></i> My Budget</h1>
+        <p>Dashboard จัดการรายรับ-รายจ่ายส่วนตัว</p>
       </div>
       
       <div class="live-info-card">
         <div class="info-item">
             <span class="info-label">เวลาปัจจุบัน</span>
-            <div class="info-value" id="clock-display">--:--:--</div>
+            <div class="info-value" id="clock-display"><i class="fa-regular fa-clock"></i> --:--:--</div>
             <div style="font-size:12px; color:#64748b;" id="date-display">...</div>
         </div>
         <div style="width:1px; height:30px; background:#cbd5e1;"></div>
@@ -176,46 +209,46 @@
         <aside class="left-panel">
              <section class="form-card">
                 <div class="section-title">
-                  <span>บันทึกรายการ</span>
-                  <a href="manage.html" class="setting-link">จัดการหมวดหมู่</a>
+                  <span><i class="fa-solid fa-pen-to-square"></i> บันทึกรายการ</span>
+                  <a href="manage.html" class="setting-link"><i class="fa-solid fa-sliders"></i> จัดการหมวดหมู่</a>
                 </div>
 
                 <form id="entry-form" class="form-layout">
                     <div>
-                        <label class="lbl">วันที่</label>
+                        <label class="lbl"><i class="fa-regular fa-calendar"></i> วันที่</label>
                         <input type="date" id="date" class="std-input" required>
                     </div>
                     <div>
-                        <label class="lbl">ชื่อรายการ</label>
-                        <input type="text" id="item" class="std-input" placeholder="ระบุรายการ..." required>
+                        <label class="lbl"><i class="fa-solid fa-tag"></i> ชื่อรายการ</label>
+                        <input type="text" id="item" class="std-input" placeholder="เช่น ค่าอาหาร, เงินเดือน..." required>
                     </div>
                     <div>
-                        <label class="lbl">หมวดหมู่</label>
+                        <label class="lbl"><i class="fa-solid fa-layer-group"></i> หมวดหมู่</label>
                         <div id="category-container" class="category-container">
-                            <span style="font-size:13px; color:#94a3b8;">กำลังโหลด...</span>
+                            <span style="font-size:13px; color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลด...</span>
                         </div>
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                         <div>
-                            <label class="lbl" style="color:#15803d">รายรับ (+)</label>
-                            <input type="number" id="income" class="std-input" style="background:#f0fdf4; border-color:#86efac; color:#166534; font-weight:600;" placeholder="0.00" min="0" step="0.01">
+                            <label class="lbl" style="color:#16a34a"><i class="fa-solid fa-arrow-down"></i> รายรับ (+)</label>
+                            <input type="number" id="income" class="std-input" style="background:#f0fdf4; border-color:#86efac; color:#166534; font-weight:700;" placeholder="0.00" min="0" step="0.01">
                         </div>
                         <div>
-                            <label class="lbl" style="color:#b91c1c">รายจ่าย (-)</label>
-                            <input type="number" id="expense" class="std-input" style="background:#fef2f2; border-color:#fca5a5; color:#991b1b; font-weight:600;" placeholder="0.00" min="0" step="0.01">
+                            <label class="lbl" style="color:#dc2626"><i class="fa-solid fa-arrow-up"></i> รายจ่าย (-)</label>
+                            <input type="number" id="expense" class="std-input" style="background:#fef2f2; border-color:#fca5a5; color:#991b1b; font-weight:700;" placeholder="0.00" min="0" step="0.01">
                         </div>
                     </div>
                     <div>
-                        <label class="lbl">วิธีชำระ</label>
+                        <label class="lbl"><i class="fa-solid fa-wallet"></i> วิธีชำระ</label>
                         <select id="method" class="std-input" required><option value="">เลือก...</option></select>
                     </div>
                     <div>
-                        <label class="lbl">หมายเหตุ</label>
+                        <label class="lbl"><i class="fa-regular fa-note-sticky"></i> หมายเหตุ</label>
                         <input type="text" id="note" class="std-input" placeholder="...">
                     </div>
                     <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button type="reset" class="btn-sec">ล้างค่า</button>
-                        <button type="submit" class="btn-main">บันทึกข้อมูล</button>
+                        <button type="reset" class="btn-sec"><i class="fa-solid fa-rotate-left"></i> ล้างค่า</button>
+                        <button type="submit" class="btn-main"><i class="fa-solid fa-save"></i> บันทึกข้อมูล</button>
                     </div>
                 </form>
             </section>
@@ -224,32 +257,44 @@
         <main class="right-panel">
             <div class="stats-container">
                 <div class="stat-box">
-                  <span class="stat-label">รายรับทั้งหมด</span>
-                  <span class="stat-val val-inc" id="sum-income">0.00</span>
+                  <div class="stat-info">
+                      <span class="stat-label">รายรับทั้งหมด</span>
+                      <span class="stat-val val-inc" id="sum-income">0.00</span>
+                  </div>
+                  <div class="stat-icon-bg bg-inc"><i class="fa-solid fa-arrow-trend-up"></i></div>
                 </div>
                 <div class="stat-box">
-                  <span class="stat-label">รายจ่ายทั้งหมด</span>
-                  <span class="stat-val val-exp" id="sum-expense">0.00</span>
+                  <div class="stat-info">
+                      <span class="stat-label">รายจ่ายทั้งหมด</span>
+                      <span class="stat-val val-exp" id="sum-expense">0.00</span>
+                  </div>
+                  <div class="stat-icon-bg bg-exp"><i class="fa-solid fa-arrow-trend-down"></i></div>
                 </div>
                 <div class="stat-box">
-                  <span class="stat-label">คงเหลือสุทธิ</span>
-                  <span class="stat-val val-net" id="sum-net">0.00</span>
+                   <div class="stat-info">
+                      <span class="stat-label">คงเหลือสุทธิ</span>
+                      <span class="stat-val val-net" id="sum-net">0.00</span>
+                   </div>
+                   <div class="stat-icon-bg bg-net"><i class="fa-solid fa-wallet"></i></div>
                 </div>
             </div>
 
             <section class="table-card">
                 <div class="table-toolbar">
-                    <div style="font-size:16px; font-weight:700;">ประวัติรายการ</div>
+                    <div style="font-size:16px; font-weight:700; color:#334155;"><i class="fa-solid fa-clock-rotate-left"></i> ประวัติรายการ</div>
                     
                     <div class="filter-group">
                         <input type="month" id="filter-month" class="dropdown-filter">
                         <select id="filter-category" class="dropdown-filter"></select>
                         <select id="filter-method" class="dropdown-filter"></select>
-                        <input type="text" id="filter-text" class="dropdown-filter" style="flex:1;" placeholder="ค้นหา...">
-                        <button id="clear-filter" class="dropdown-filter" style="cursor:pointer; background:#f1f5f9;">รีเซ็ต</button>
+                        <div style="position:relative; flex:1; min-width:150px;">
+                            <i class="fa-solid fa-search" style="position:absolute; left:10px; top:11px; color:#94a3b8; font-size:13px;"></i>
+                            <input type="text" id="filter-text" class="dropdown-filter" style="width:100%; padding-left:30px;" placeholder="ค้นหา...">
+                        </div>
+                        <button id="clear-filter" class="dropdown-filter" style="cursor:pointer; background:#f1f5f9;"><i class="fa-solid fa-filter-circle-xmark"></i> รีเซ็ต</button>
                     </div>
 
-                    <button id="btn-export-pdf" class="btn-pdf">📄 Export PDF</button>
+                    <button id="btn-export-pdf" class="btn-pdf"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
                 </div>
 
                 <div class="table-wrapper">
@@ -262,7 +307,7 @@
                             <th width="12%" style="text-align:right;">รายจ่าย</th>
                             <th width="15%" style="text-align:center;">หมวดหมู่</th>
                             <th style="text-align:center; white-space:nowrap;">วิธีชำระ</th>
-                            <th width="14%" style="text-align:center;">จัดการ</th>
+                            <th width="12%" style="text-align:center;">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="table-body"></tbody>
@@ -285,7 +330,7 @@
             </section>
         </main>
     </div>
-    <div style="text-align:center; padding:20px; color:#94a3b8; font-size:12px;">Copyright © 2024 - My Budget Dashboard</div>
+    <div style="text-align:center; padding:20px; color:rgba(0,0,0,0.4); font-size:12px; font-weight:500;">Copyright © 2024 - My Budget Dashboard</div>
   </div>
 
   <script type="module" src="main.js"></script>
