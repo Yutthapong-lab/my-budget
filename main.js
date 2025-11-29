@@ -110,7 +110,7 @@ function setupExportPDF() {
         const m = String(d.getMinutes()).padStart(2, '0');
         const s = String(d.getSeconds()).padStart(2, '0');
 
-        const fileName = `my-budget_${day}${month}${year}_${h}${m}${s}.pdf`;
+        const fileName = `report-my-budget_${day}${month}${year}_${h}${m}${s}.pdf`;
         doc.save(fileName);
     });
 }
@@ -310,3 +310,4 @@ function setupEventListeners() {
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
+
