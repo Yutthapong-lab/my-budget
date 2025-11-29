@@ -64,7 +64,7 @@ function formatThaiDate(dateString) {
     return `${d}/${m}/${thaiYear}`;
 }
 
-// --- PDF Export Logic ---
+// --- PDF Export Logic (Merged Date/Time + Pagination) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -110,22 +110,22 @@ function setupExportPDF() {
             
             doc.setFontSize(10); 
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
-            
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
-            // >>> เพิ่มคอลัมน์ "Time" <<<
-            const tableColumn = ["Date", "Time", "Item", "Income", "Expense", "Category", "Method"];
+            // 1. ตัดคอลัมน์ Time ออก (เพราะจะรวมกับ Date)
+            const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
             
             const tableRows = filteredRecords.map(r => {
-                // คำนวณเวลา (เหมือนในหน้าเว็บ)
                 let timeStr = "";
                 if (r.createdAt) {
                     timeStr = new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) + " น.";
                 }
 
+                // 2. รวม Date และ Time ด้วย \n (ขึ้นบรรทัดใหม่)
+                const dateTimeStr = `${formatThaiDate(r.date)}\n${timeStr}`;
+
                 return [
-                    formatThaiDate(r.date),
-                    timeStr, // ใส่เวลาลงไปในคอลัมน์ที่ 2
+                    dateTimeStr,
                     r.item, 
                     r.income > 0 ? r.income.toFixed(2) : "-", 
                     r.expense > 0 ? r.expense.toFixed(2) : "-",
@@ -140,13 +140,30 @@ function setupExportPDF() {
                 startY: 40,
                 styles: { 
                     font: 'Sarabun', 
-                    fontStyle: 'normal' 
+                    fontStyle: 'normal',
+                    valign: 'middle' // จัดแนวตั้งให้อยู่กึ่งกลางเพื่อความสวยงาม
                 },
                 headStyles: { 
                     fillColor: [99, 102, 241],
-                    font: 'Sarabun'
+                    font: 'Sarabun',
+                    halign: 'center'
+                },
+                columnStyles: {
+                    0: { halign: 'center' } // จัดคอลัมน์ Date ให้กึ่งกลาง
                 }
             });
+
+            // 3. เพิ่มเลขหน้า (Pagination)
+            const pageCount = doc.internal.getNumberOfPages();
+            doc.setFontSize(10);
+            for(let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                // เขียน text ที่มุมขวาล่าง: หน้าที่ X จาก Y
+                const pageText = `หน้าที่ ${i} จาก ${pageCount}`;
+                const pageWidth = doc.internal.pageSize.width;
+                const pageHeight = doc.internal.pageSize.height;
+                doc.text(pageText, pageWidth - 20, pageHeight - 10, { align: 'right' });
+            }
 
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
