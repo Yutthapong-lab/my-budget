@@ -4,13 +4,13 @@ import {
     collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-// >>> ส่วนตั้งค่ากลาง (แก้ตรงนี้ทีเดียว เปลี่ยนทั้งเว็บและ PDF) <<<
+// >>> Config กลาง (แก้ที่เดียว เปลี่ยนทั้งหน้าเว็บและ PDF) <<<
 const APP_INFO = {
-    version: "v1.0.0",
+    version: "v1.1.0",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
-// -------------------------------------------------------------
+// --------------------------------------------------------
 
 let allRecords = [];
 let filteredRecords = [];
@@ -21,7 +21,7 @@ const recordsCol = collection(db, "records");
 let masterCategories = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Inject Footer Info to HTML
+    // Inject Footer Info (ใส่ข้อมูลลงหน้าเว็บ)
     const fVer = document.getElementById('footer-version');
     const fCred = document.getElementById('footer-credit');
     if(fVer) fVer.innerText = APP_INFO.version;
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
 
     startClock();
-    fetchWeather();
+    fetchWeather(); // ดึงสภาพอากาศ + ที่อยู่จริง
     setupExportPDF();
 });
 
@@ -45,26 +45,57 @@ function startClock() {
         const now = new Date();
         const timeEl = document.getElementById('clock-display');
         const dateEl = document.getElementById('date-display');
-        if(timeEl) timeEl.innerHTML = `<i class="fa-regular fa-clock"></i> ${now.toLocaleTimeString('th-TH', { hour12: false })}`;
+        // นาฬิกาดุ๊กดิ๊กอยู่ใน HTML แล้ว แค่อัปเดตตัวเลข
+        if(timeEl) timeEl.innerHTML = `<i class="fa-solid fa-clock anim-spin"></i> ${now.toLocaleTimeString('th-TH', { hour12: false })}`;
         if(dateEl) dateEl.innerText = now.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
     };
     updateTime(); setInterval(updateTime, 1000);
 }
 
+// --- Fetch Weather & Real Location (Reverse Geocoding) ---
 function fetchWeather() {
     const updateUI = (temp, desc, locName) => {
         document.getElementById('temp-val').innerText = temp;
-        const icon = (desc === 0) ? "☀️" : (desc <= 3) ? "⛅" : (desc >= 95) ? "⛈️" : "🌧️"; 
-        document.querySelector('.weather-icon').innerText = icon;
+        // const icon = (desc === 0) ? "☀️" : (desc <= 3) ? "⛅" : (desc >= 95) ? "⛈️" : "🌧️"; 
+        // ไอคอนเรา Fix ไว้ใน HTML แล้ว (รูปเมฆ)
         document.getElementById('location-name').innerText = locName;
     }
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(async (pos) => {
             try {
                 const { latitude: lat, longitude: lon } = pos.coords;
-                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
-                const data = await res.json();
-                if(data.current_weather) updateUI(data.current_weather.temperature, data.current_weather.weathercode, "ตำแหน่งปัจจุบัน");
+
+                // 1. ดึงข้อมูลอากาศ
+                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                const weatherData = await weatherRes.json();
+
+                // 2. ดึงชื่อสถานที่จริง (Reverse Geocoding จาก OpenStreetMap)
+                let locationName = "ตำแหน่งปัจจุบัน";
+                try {
+                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14&accept-language=th`);
+                    const geoData = await geoRes.json();
+                    
+                    if (geoData.address) {
+                        const addr = geoData.address;
+                        // พยายามหา แขวง/ตำบล -> เขต/อำเภอ -> จังหวัด
+                        const localArea = addr.suburb || addr.district || addr.town || "";
+                        const province = addr.province || addr.city || "";
+                        
+                        if (localArea && province) {
+                            locationName = `${localArea} ${province}`;
+                        } else if (province) {
+                            locationName = province;
+                        }
+                    }
+                } catch (geoErr) {
+                    console.warn("Location fetch error:", geoErr);
+                }
+
+                if(weatherData.current_weather) {
+                    updateUI(weatherData.current_weather.temperature, weatherData.current_weather.weathercode, locationName);
+                }
+
             } catch(e) { console.error(e); }
         }, () => updateUI("--", 0, "ไม่พบตำแหน่ง"));
     }
@@ -78,7 +109,7 @@ function formatThaiDate(dateString) {
     return `${d}/${m}/${thaiYear}`;
 }
 
-// --- PDF Export Logic ---
+// --- PDF Export Logic (Full Options) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -95,7 +126,7 @@ function setupExportPDF() {
     
     btn.addEventListener('click', async () => {
         const originalText = btn.innerHTML;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดฟอนต์...`;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลด...`;
         btn.disabled = true;
         
         try {
@@ -117,7 +148,7 @@ function setupExportPDF() {
             doc.addFont(fileName, "Sarabun", "normal");
             doc.setFont("Sarabun"); 
             
-            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้าง PDF...`;
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> สร้าง PDF...`;
 
             doc.setFontSize(18); 
             doc.text("My Budget Report", 14, 22);
@@ -126,14 +157,14 @@ function setupExportPDF() {
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
-            const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
+            // คอลัมน์ PDF (รวม Date+Time ไว้ช่องแรก)
+            const tableColumn = ["Date / Time", "Item", "Income", "Expense", "Category", "Method"];
             
             const tableRows = filteredRecords.map(r => {
                 let timeStr = "";
                 if (r.createdAt) {
                     timeStr = new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) + " น.";
                 }
-
                 const dateTimeStr = `${formatThaiDate(r.date)}\n${timeStr}`;
 
                 return [
@@ -165,6 +196,7 @@ function setupExportPDF() {
                 }
             });
 
+            // --- Footer (Version, Credit, Page No.) ---
             const pageCount = doc.internal.getNumberOfPages();
             const pageWidth = doc.internal.pageSize.width;
             const pageHeight = doc.internal.pageSize.height;
@@ -176,7 +208,7 @@ function setupExportPDF() {
             for(let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
                 
-                // ใช้ตัวแปร APP_INFO ที่ประกาศไว้ด้านบน
+                // ใช้ Config กลาง
                 doc.text(APP_INFO.version, 14, footerY);
 
                 const creditText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
@@ -187,6 +219,7 @@ function setupExportPDF() {
 
             doc.setTextColor(0);
 
+            // ชื่อไฟล์
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -255,7 +288,7 @@ window.editRecord = function(id) {
 
 function resetSubmitButton() {
     const btn = document.querySelector("#entry-form button[type='submit']");
-    btn.innerHTML = '<i class="fa-solid fa-save"></i> บันทึกข้อมูล'; btn.classList.remove("edit-mode");
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk anim-beat"></i> บันทึกข้อมูล'; btn.classList.remove("edit-mode");
 }
 
 async function loadMasterData() {
@@ -305,17 +338,19 @@ function applyFilters() {
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
+    // Default 10 items
     const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1; if (currentPage > totalPages) currentPage = totalPages;
 
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+    // Update Total Count
     const totalCountEl = document.getElementById("total-count");
     if(totalCountEl) totalCountEl.innerText = filteredRecords.length;
 
     if(displayItems.length === 0) {
-        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;"><i class="fa-solid fa-inbox" style="font-size:24px; margin-bottom:8px;"></i><br>- ไม่พบข้อมูล -</td></tr>`;
+        container.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;"><i class="fa-solid fa-inbox fa-bounce" style="font-size:24px; margin-bottom:8px;"></i><br>- ไม่พบข้อมูล -</td></tr>`;
         return;
     }
 
@@ -410,4 +445,3 @@ function setupEventListeners() {
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
-
