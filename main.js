@@ -11,7 +11,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.2",
+    version: "v1.0.3",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -69,7 +69,6 @@ const auth = getAuth();
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject Footer
     const fVer = document.getElementById('footer-version');
     const fCred = document.getElementById('footer-credit');
     if(fVer) fVer.innerText = APP_INFO.version;
@@ -80,12 +79,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
         const footer = document.getElementById('app-footer');
+        const userDisplay = document.getElementById('user-display'); // จุดแสดงชื่อ
 
         if (user) {
             loginSection.style.display = 'none';
             dashboardSection.style.display = 'flex';
             footer.style.display = 'flex';
             
+            // >>> แสดงอีเมลผู้ใช้ <<<
+            if (userDisplay) userDisplay.innerText = user.email || "User";
+
             // ชี้เป้าไปที่ห้องส่วนตัวของ User
             recordsCol = collection(db, "users", user.uid, "records");
 
@@ -101,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loginSection.style.display = 'block';
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
+            if(userDisplay) userDisplay.innerText = "...";
             
             if(unsubscribe) unsubscribe();
             allRecords = [];
@@ -317,7 +321,6 @@ function setupExportPDF() {
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
             
-            // >>> ตั้งชื่อไฟล์ใหม่ตามที่ขอ: my-budget-report_ddmmyyyy_hhmmss.pdf <<<
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -326,6 +329,7 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
+            // Format: my-budget-report_ddmmyyyy_hhmmss.pdf
             const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
             doc.save(fileNameStr);
 
