@@ -1,7 +1,7 @@
-// --- main.js (v1.1.5 - เพิ่มฟังก์ชันลืมรหัสผ่าน) ---
+// --- main.js (v1.1.6 - Clear Email after Reset) ---
 import { db } from "./firebase-config.js";
 
-// ⚠️ Import เพิ่ม: sendPasswordResetEmail
+// ⚠️ Import ตัวเดิมให้ครบ
 import { 
     getAuth, 
     signInWithEmailAndPassword, 
@@ -13,7 +13,7 @@ import {
     deleteUser,
     reauthenticateWithCredential,
     EmailAuthProvider,
-    sendPasswordResetEmail // <--- เพิ่มตัวนี้เข้ามา
+    sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 
 import { 
@@ -25,7 +25,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.5", // Update Version
+    version: "v1.1.6", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -189,7 +189,7 @@ function setupAuthListeners() {
         });
     }
 
-    // >>> [NEW] ปุ่มลืมรหัสผ่าน (Forgot Password) <<<
+    // ปุ่มลืมรหัสผ่าน
     const btnForgot = document.getElementById('btn-forgot-pass');
     if (btnForgot) {
         btnForgot.addEventListener('click', async () => {
@@ -202,6 +202,8 @@ function setupAuthListeners() {
             if(confirm(`ต้องการส่งลิงก์รีเซ็ตรหัสผ่านไปยัง: ${email} ใช่หรือไม่?`)) {
                 try {
                     await sendPasswordResetEmail(auth, email);
+                    // >>> [UPDATE] เคลียร์อีเมลหลังส่งสำเร็จ <<<
+                    emailInput.value = ""; 
                     alert(`✅ ส่งลิงก์เรียบร้อยแล้ว!\nกรุณาตรวจสอบ Email (รวมถึงใน Junk/Spam)\nเพื่อตั้งรหัสผ่านใหม่ครับ`);
                 } catch (error) {
                     console.error(error);
@@ -229,7 +231,6 @@ function setupAuthListeners() {
                 switchText.innerText = "มีบัญชีอยู่แล้ว?";
                 switchBtn.innerText = "เข้าสู่ระบบ";
                 authBtn.style.background = "#10b981"; 
-                // ซ่อนปุ่มลืมรหัสผ่านตอนสมัครสมาชิก
                 if(btnForgot) btnForgot.parentElement.style.display = 'none';
             } else {
                 authTitle.innerText = "เข้าสู่ระบบ";
@@ -237,7 +238,6 @@ function setupAuthListeners() {
                 switchText.innerText = "ยังไม่มีบัญชี?";
                 switchBtn.innerText = "สมัครสมาชิก";
                 authBtn.style.background = "var(--primary)"; 
-                // โชว์ปุ่มลืมรหัสผ่านตอน Login
                 if(btnForgot) btnForgot.parentElement.style.display = 'block';
             }
         });
@@ -329,7 +329,7 @@ function setupAuthListeners() {
     }
 }
 
-// --- Data Management & Other Features (Same as v1.1.4) ---
+// --- Data Management & Other Features ---
 function subscribeToFirestore() {
     if (!recordsCol) return;
     if (unsubscribe) unsubscribe();
