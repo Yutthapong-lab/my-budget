@@ -56,12 +56,11 @@ function fetchWeather() {
     }
 }
 
-// --- Fix: PDF Export Logic (Updated Stable Font URL) ---
+// --- PDF Export Logic (Stable Version) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
 
-    // ฟังก์ชันแปลง Buffer เป็น Base64 สำหรับ jsPDF
     const arrayBufferToBase64 = (buffer) => {
         let binary = '';
         const bytes = new Uint8Array(buffer);
@@ -74,7 +73,6 @@ function setupExportPDF() {
     
     btn.addEventListener('click', async () => {
         const originalText = btn.innerHTML;
-        // เปลี่ยนสถานะปุ่ม
         btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดฟอนต์...`;
         btn.disabled = true;
         
@@ -82,7 +80,6 @@ function setupExportPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // >>> [แก้ไขลิงก์] ใช้ CDN ของเจ้าของฟอนต์ (Cadsondemak) โดยตรงเพื่อความเสถียร <<<
             const fontUrl = 'https://cdn.jsdelivr.net/gh/cadsondemak/Sarabun@master/fonts/Sarabun-Regular.ttf';
             
             const response = await fetch(fontUrl);
@@ -93,15 +90,11 @@ function setupExportPDF() {
             const fontBuffer = await response.arrayBuffer();
             const fontBase64 = arrayBufferToBase64(fontBuffer);
 
-            // เพิ่มฟอนต์ลงใน Virtual File System (VFS) ของ jsPDF
             const fileName = "Sarabun-Regular.ttf";
             doc.addFileToVFS(fileName, fontBase64);
             doc.addFont(fileName, "Sarabun", "normal");
-            
-            // เรียกใช้ฟอนต์
             doc.setFont("Sarabun"); 
             
-            // เริ่มสร้างเอกสาร
             btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้าง PDF...`;
 
             doc.setFontSize(18); 
@@ -134,25 +127,14 @@ function setupExportPDF() {
                 }
             });
 
-            // ตั้งชื่อไฟล์
             const d = new Date();
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear() + 543;
-            const h = String(d.getHours()).padStart(2, '0');
-            const m = String(d.getMinutes()).padStart(2, '0');
-            const s = String(d.getSeconds()).padStart(2, '0');
-            
-            const pdfName = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
-            
-            doc.save(pdfName);
+            const fileNameStr = `my-budget-report_${d.getDate()}_${d.getHours()}${d.getMinutes()}.pdf`;
+            doc.save(fileNameStr);
             
         } catch (err) {
             console.error("PDF Error:", err);
-            // แสดงข้อความแนะนำถ้าโหลดไม่ได้จริงๆ
-            alert(`เกิดข้อผิดพลาด: ${err.message}\n\nลองตรวจสอบอินเทอร์เน็ต หรือดาวน์โหลดไฟล์ 'Sarabun-Regular.ttf' มาวางไว้ในโฟลเดอร์เดียวกับ index.html`);
+            alert(`เกิดข้อผิดพลาด: ${err.message}`);
         } finally {
-            // คืนค่าปุ่มกลับสู่สภาพเดิม
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
@@ -255,7 +237,8 @@ function applyFilters() {
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
-    const pageSize = parseInt(document.getElementById("page-size")?.value || 5);
+    // แก้ไข: เปลี่ยน Fallback จาก 5 เป็น 10
+    const pageSize = parseInt(document.getElementById("page-size")?.value || 10);
     const totalPages = Math.ceil(filteredRecords.length / pageSize) || 1;
     if (currentPage < 1) currentPage = 1; if (currentPage > totalPages) currentPage = totalPages;
 
@@ -354,4 +337,3 @@ function setupEventListeners() {
     });
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
-
