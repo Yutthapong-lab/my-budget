@@ -56,25 +56,54 @@ function fetchWeather() {
     }
 }
 
-// --- Fix: PDF Export Logic (เพิ่ม addFont แล้ว) ---
+// --- Fix: PDF Export Logic (Fetch Font & Add to VFS) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
+
+    // ฟังก์ชันแปลง Buffer เป็น Base64 สำหรับ jsPDF
+    const arrayBufferToBase64 = (buffer) => {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
+    };
     
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
         const originalText = btn.innerHTML;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้าง PDF...`;
+        // เปลี่ยนสถานะปุ่ม
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังโหลดฟอนต์...`;
+        btn.disabled = true;
         
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // >>> [ส่วนที่แก้ไข] ลงทะเบียนฟอนต์ <<<
-            doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
+            // 1. โหลดไฟล์ฟอนต์ Sarabun จาก CDN (Google Fonts via jsDelivr)
+            const fontUrl = 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/sarabun/Sarabun-Regular.ttf';
+            const response = await fetch(fontUrl);
             
-            // เรียกใช้ฟอนต์ที่ลงทะเบียนแล้ว
-            doc.setFont('Sarabun'); 
+            if (!response.ok) {
+                throw new Error("ไม่สามารถดาวน์โหลดฟอนต์ได้");
+            }
             
+            const fontBuffer = await response.arrayBuffer();
+            const fontBase64 = arrayBufferToBase64(fontBuffer);
+
+            // 2. เพิ่มฟอนต์ลงใน Virtual File System (VFS) ของ jsPDF
+            const fileName = "Sarabun-Regular.ttf";
+            doc.addFileToVFS(fileName, fontBase64);
+            doc.addFont(fileName, "Sarabun", "normal");
+            
+            // 3. เรียกใช้ฟอนต์
+            doc.setFont("Sarabun"); 
+            
+            // เริ่มวาดเนื้อหา PDF
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังสร้าง PDF...`;
+
             doc.setFontSize(18); 
             doc.text("My Budget Report", 14, 22);
             
@@ -114,15 +143,17 @@ function setupExportPDF() {
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            const fileName = `my-budget_${day}${month}${year}_${h}${m}${s}.pdf`;
+            const pdfName = `my-budget_${day}${month}${year}_${h}${m}${s}.pdf`;
             
-            doc.save(fileName);
+            doc.save(pdfName);
             
-            btn.innerHTML = originalText;
         } catch (err) {
             console.error("PDF Error:", err);
-            alert("เกิดข้อผิดพลาดในการสร้าง PDF");
+            alert("เกิดข้อผิดพลาดในการสร้าง PDF: " + err.message);
+        } finally {
+            // คืนค่าปุ่มกลับสู่สภาพเดิม
             btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     });
 }
