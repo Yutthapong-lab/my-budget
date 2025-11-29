@@ -56,7 +56,7 @@ function fetchWeather() {
     }
 }
 
-// --- Fix: PDF Export Logic (ใช้ Script Tag โหลดฟอนต์ ไม่ใช้ Fetch) ---
+// --- Fix: PDF Export Logic (เพิ่ม addFont แล้ว) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -69,7 +69,10 @@ function setupExportPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // ใช้ฟอนต์ Sarabun ที่โหลดมาจาก Script ได้เลย (ชื่อฟอนต์คือ 'Sarabun')
+            // >>> [ส่วนที่แก้ไข] ลงทะเบียนฟอนต์ <<<
+            doc.addFont('Sarabun-Regular.ttf', 'Sarabun', 'normal');
+            
+            // เรียกใช้ฟอนต์ที่ลงทะเบียนแล้ว
             doc.setFont('Sarabun'); 
             
             doc.setFontSize(18); 
