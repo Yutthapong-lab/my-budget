@@ -1,6 +1,5 @@
 // --- main.js ---
 import { db } from "./firebase-config.js";
-// >>> เพิ่ม import createUserWithEmailAndPassword <<<
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } 
 from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 import { 
@@ -12,7 +11,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.5 (Auth)",
+    version: "v1.0.6",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -118,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// --- Auth System (Updated) ---
+// --- Auth System ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
     const switchBtn = document.getElementById('auth-switch-btn');
@@ -130,28 +129,26 @@ function setupAuthListeners() {
     // 1. ฟังก์ชันสลับหน้า Login / Register
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
-            isRegisterMode = !isRegisterMode; // สลับสถานะ
-            errDiv.innerText = ""; // เคลียร์ Error เดิม
+            isRegisterMode = !isRegisterMode; 
+            errDiv.innerText = ""; 
             
             if (isRegisterMode) {
-                // โหมดสมัครสมาชิก
                 authTitle.innerText = "สมัครสมาชิกใหม่";
                 authBtn.innerText = "ลงทะเบียน";
                 switchText.innerText = "มีบัญชีอยู่แล้ว?";
                 switchBtn.innerText = "เข้าสู่ระบบ";
-                authBtn.style.background = "#10b981"; // เปลี่ยนปุ่มเป็นสีเขียว
+                authBtn.style.background = "#10b981"; 
             } else {
-                // โหมดล็อกอิน
                 authTitle.innerText = "เข้าสู่ระบบ";
                 authBtn.innerText = "เข้าใช้งาน";
                 switchText.innerText = "ยังไม่มีบัญชี?";
                 switchBtn.innerText = "สมัครสมาชิก";
-                authBtn.style.background = "var(--primary)"; // สีม่วงเดิม
+                authBtn.style.background = "var(--primary)"; 
             }
         });
     }
 
-    // 2. ฟังก์ชัน Submit (Login หรือ Register ตามโหมดปัจจุบัน)
+    // 2. ฟังก์ชัน Submit
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -161,28 +158,24 @@ function setupAuthListeners() {
             
             try {
                 if (isRegisterMode) {
-                    // >>> สมัครสมาชิก <<<
                     await createUserWithEmailAndPassword(auth, email, pass);
-                    // สมัครเสร็จแล้วไม่ต้องทำอะไร onAuthStateChanged จะพาเข้าหน้าหลักเอง
                 } else {
-                    // >>> เข้าสู่ระบบ <<<
                     await signInWithEmailAndPassword(auth, email, pass);
                 }
                 errDiv.innerText = "";
             } catch (error) {
                 console.error(error);
                 let msg = "เกิดข้อผิดพลาด";
-                // แปล Error ให้อ่านง่าย
                 if(error.code === 'auth/email-already-in-use') msg = "อีเมลนี้มีผู้ใช้งานแล้ว";
                 else if(error.code === 'auth/weak-password') msg = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
                 else if(error.code === 'auth/invalid-email') msg = "รูปแบบอีเมลไม่ถูกต้อง";
                 else if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-                
                 errDiv.innerText = msg;
             }
         });
     }
 
+    // 3. Logout
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -190,6 +183,38 @@ function setupAuthListeners() {
         });
     }
 
+    // 4. Request Delete
+    const requestDeleteBtn = document.getElementById('btn-request-delete');
+    if (requestDeleteBtn) {
+        requestDeleteBtn.addEventListener('click', async () => {
+            if (!confirm("คุณต้องการส่งคำขอให้ Admin ลบบัญชีของคุณใช่หรือไม่?\n(ข้อมูลจะถูกลบหลังจาก Admin ดำเนินการ)")) {
+                return;
+            }
+            const user = auth.currentUser;
+            if (!user) return;
+            const reason = prompt("โปรดระบุเหตุผลที่ต้องการลบ (ไม่บังคับ):", "-");
+
+            try {
+                requestDeleteBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่ง...';
+                await addDoc(collection(db, "deletion_requests"), {
+                    uid: user.uid,
+                    email: user.email,
+                    reason: reason || "ไม่ระบุ",
+                    status: "pending",
+                    requestDate: serverTimestamp()
+                });
+                alert("✅ ส่งคำขอเรียบร้อยแล้ว!\nเจ้าหน้าที่จะดำเนินการลบข้อมูลของคุณภายใน 24 ชม.");
+                requestDeleteBtn.innerHTML = '<i class="fa-solid fa-check"></i> ส่งเรื่องแล้ว';
+                requestDeleteBtn.disabled = true;
+            } catch (error) {
+                console.error("Error requesting deletion:", error);
+                alert("ส่งคำขอไม่สำเร็จ: " + error.message);
+                requestDeleteBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> แจ้งลบบัญชี';
+            }
+        });
+    }
+
+    // 5. Eye View Toggle
     const togglePassword = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('login-pass');
     if (togglePassword && passwordInput) {
