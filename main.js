@@ -11,10 +11,13 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.6",
+    version: "v1.0.8 (Super Admin)",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
+
+// ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณคนเดียวครับ
+const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
 // ฟังก์ชันแปลงตัวเลข (ใส่คอมม่า)
 function formatNumber(n) { 
@@ -63,7 +66,7 @@ let masterCategories = [];
 let recordsCol = null;
 let unsubscribe = null;
 const auth = getAuth();
-let isRegisterMode = false; // ตัวแปรบอกสถานะว่ากำลัง Login หรือ Register
+let isRegisterMode = false;
 
 // ==========================================
 // >>> 3. การทำงานหลัก (Main Logic) <<<
@@ -76,12 +79,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if(fVer) fVer.innerText = APP_INFO.version;
     if(fCred) fCred.innerText = `${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`;
 
-    // ตรวจสอบ Login
+    // ตรวจสอบสิทธิ์การเข้าถึงหน้า Manage (ทำงานทันทีที่โหลด)
+    checkAdminAccess();
+
+    // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
         const footer = document.getElementById('app-footer');
         const userDisplay = document.getElementById('user-display');
+        const settingLink = document.querySelector('.setting-link'); // ปุ่มจัดการหมวดหมู่
 
         if (user) {
             loginSection.style.display = 'none';
@@ -89,6 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
             footer.style.display = 'flex';
             
             if (userDisplay) userDisplay.innerText = user.email || "User";
+
+            // >>> Logic ซ่อน/โชว์ปุ่ม Admin <<<
+            if (settingLink) {
+                // ถ้าอีเมลตรงกับ ADMIN_EMAIL ให้โชว์ปุ่ม ถ้าไม่ตรงให้ซ่อน
+                settingLink.style.display = (user.email === ADMIN_EMAIL) ? 'flex' : 'none';
+            }
 
             // ชี้เป้าไปที่ห้องส่วนตัวของ User
             recordsCol = collection(db, "users", user.uid, "records");
@@ -117,6 +130,19 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
+// ฟังก์ชันป้องกันการเข้าถึงหน้า Admin
+function checkAdminAccess() {
+    if (window.location.pathname.includes("manage.html")) {
+        onAuthStateChanged(auth, (user) => {
+            // ถ้าไม่ได้ล็อกอิน หรือ ล็อกอินแล้วแต่อีเมลไม่ใช่ Admin -> ดีดกลับ
+            if (!user || user.email !== ADMIN_EMAIL) {
+                alert("⛔ ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+                window.location.href = "index.html"; 
+            }
+        });
+    }
+}
+
 // --- Auth System ---
 function setupAuthListeners() {
     const loginForm = document.getElementById('login-form');
@@ -126,12 +152,10 @@ function setupAuthListeners() {
     const authBtn = document.getElementById('auth-btn');
     const errDiv = document.getElementById('login-error');
 
-    // 1. ฟังก์ชันสลับหน้า Login / Register
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             isRegisterMode = !isRegisterMode; 
             errDiv.innerText = ""; 
-            
             if (isRegisterMode) {
                 authTitle.innerText = "สมัครสมาชิกใหม่";
                 authBtn.innerText = "ลงทะเบียน";
@@ -148,14 +172,12 @@ function setupAuthListeners() {
         });
     }
 
-    // 2. ฟังก์ชัน Submit
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const pass = document.getElementById('login-pass').value;
             errDiv.innerText = "กำลังตรวจสอบ...";
-            
             try {
                 if (isRegisterMode) {
                     await createUserWithEmailAndPassword(auth, email, pass);
@@ -175,7 +197,6 @@ function setupAuthListeners() {
         });
     }
 
-    // 3. Logout
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -183,7 +204,7 @@ function setupAuthListeners() {
         });
     }
 
-    // 4. Request Delete
+    // ปุ่มแจ้งขอลบบัญชี
     const requestDeleteBtn = document.getElementById('btn-request-delete');
     if (requestDeleteBtn) {
         requestDeleteBtn.addEventListener('click', async () => {
@@ -214,7 +235,6 @@ function setupAuthListeners() {
         });
     }
 
-    // 5. Eye View Toggle
     const togglePassword = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('login-pass');
     if (togglePassword && passwordInput) {
@@ -404,19 +424,9 @@ function setupExportPDF() {
                 doc.text(`${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
-            
             const d = new Date();
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear() + 543;
-            const h = String(d.getHours()).padStart(2, '0');
-            const m = String(d.getMinutes()).padStart(2, '0');
-            const s = String(d.getSeconds()).padStart(2, '0');
-            
-            // Format: my-budget-report_ddmmyyyy_hhmmss.pdf
-            const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
+            const fileNameStr = `my-budget-report_${d.getDate()}_${d.getMonth()+1}_${d.getFullYear()+543}.pdf`;
             doc.save(fileNameStr);
-
         } catch (err) { console.error(err); alert(`Error: ${err.message}`); } 
         finally { btn.innerHTML = originalText; btn.disabled = false; }
     });
