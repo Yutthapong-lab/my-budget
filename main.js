@@ -56,7 +56,7 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export Logic (With Total Count) ---
+// --- PDF Export Logic (Updated Filename Format) ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -103,7 +103,7 @@ function setupExportPDF() {
             doc.setFontSize(10); 
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
             
-            // >>> เพิ่มบรรทัดแสดงจำนวนรายการทั้งหมดใน PDF <<<
+            // แสดงจำนวนรายการทั้งหมดใน PDF
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
             const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
@@ -119,7 +119,7 @@ function setupExportPDF() {
             doc.autoTable({ 
                 head: [tableColumn], 
                 body: tableRows, 
-                startY: 40, // ขยับตารางลงนิดหน่อย เพื่อให้ไม่ทับ Text ด้านบน
+                startY: 40,
                 styles: { 
                     font: 'Sarabun', 
                     fontStyle: 'normal' 
@@ -130,8 +130,18 @@ function setupExportPDF() {
                 }
             });
 
+            // >>> ส่วนที่แก้ไข: ตั้งชื่อไฟล์ตามรูปแบบที่ขอ <<<
             const d = new Date();
-            const fileNameStr = `my-budget_${d.getDate()}_${d.getHours()}${d.getMinutes()}.pdf`;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear() + 543; // ปี พ.ศ.
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            
+            // Format: my-budget-report_ddmmyyyy-hhmmss.pdf
+            const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
+            
             doc.save(fileNameStr);
             
         } catch (err) {
@@ -246,7 +256,6 @@ function renderList() {
 
     const displayItems = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-    // >>> อัปเดตจำนวนรายการทั้งหมดตรงนี้ <<<
     const totalCountEl = document.getElementById("total-count");
     if(totalCountEl) totalCountEl.innerText = filteredRecords.length;
 
