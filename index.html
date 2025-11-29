@@ -45,6 +45,43 @@
       100% { background-position: 0% 50%; }
     }
 
+    /* >>> เพิ่ม Animation ตรงนี้ครับ <<< */
+    
+    /* 1. อนิเมชั่นลอยขึ้นลง (สำหรับสภาพอากาศ) */
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+        100% { transform: translateY(0px); }
+    }
+    .weather-icon {
+        display: inline-block;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    /* 2. อนิเมชั่นหมุนดุ๊กดิ๊ก (สำหรับนาฬิกา) */
+    @keyframes swing {
+        0% { transform: rotate(0deg); }
+        25% { transform: rotate(15deg); }
+        50% { transform: rotate(0deg); }
+        75% { transform: rotate(-15deg); }
+        100% { transform: rotate(0deg); }
+    }
+    #clock-display i {
+        display: inline-block;
+        animation: swing 2s ease-in-out infinite;
+        color: var(--primary); /* เปลี่ยนสีนาฬิกาให้เด่นขึ้น */
+    }
+
+    /* 3. อนิเมชั่นเด้ง (สำหรับลูกศรรายรับ-จ่าย) */
+    @keyframes bounce-slow {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+    .fa-arrow-trend-up, .fa-arrow-trend-down {
+        animation: bounce-slow 2s infinite;
+    }
+    /* --------------------------------- */
+
     .glass-container {
       width: 98%;
       max-width: 1800px;
@@ -173,7 +210,7 @@
   <div class="glass-container">
     <header class="top-bar">
       <div class="brand-section">
-        <h1><i class="fa-solid fa-chart-pie" style="color:var(--primary);"></i> My Budget</h1>
+        <h1><i class="fa-solid fa-chart-pie fa-bounce" style="color:var(--primary); --fa-animation-duration: 3s;"></i> My Budget</h1>
         <p>Dashboard จัดการรายรับ-รายจ่ายส่วนตัว</p>
       </div>
       <div class="live-info-card">
@@ -263,7 +300,7 @@
                       <span class="stat-label">คงเหลือสุทธิ</span>
                       <span class="stat-val val-net" id="sum-net">0.00</span>
                    </div>
-                   <div class="stat-icon-bg bg-net"><i class="fa-solid fa-wallet"></i></div>
+                   <div class="stat-icon-bg bg-net"><i class="fa-solid fa-wallet fa-shake" style="--fa-animation-duration: 5s;"></i></div>
                 </div>
             </div>
 
