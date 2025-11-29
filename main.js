@@ -56,7 +56,15 @@ function fetchWeather() {
     }
 }
 
-// --- PDF Export Logic (Updated Filename Format) ---
+// --- Helper: แปลงวันที่เป็นไทย (DD/MM/YYYY พ.ศ.) ---
+function formatThaiDate(dateString) {
+    if (!dateString) return "-";
+    const [y, m, d] = dateString.split('-');
+    const thaiYear = parseInt(y) + 543;
+    return `${d}/${m}/${thaiYear}`;
+}
+
+// --- PDF Export Logic ---
 function setupExportPDF() {
     const btn = document.getElementById('btn-export-pdf');
     if(!btn) return;
@@ -103,12 +111,11 @@ function setupExportPDF() {
             doc.setFontSize(10); 
             doc.text(`Exported: ${new Date().toLocaleString('th-TH')}`, 14, 28);
             
-            // แสดงจำนวนรายการทั้งหมดใน PDF
             doc.text(`Total Items: ${filteredRecords.length}`, 14, 33);
 
             const tableColumn = ["Date", "Item", "Income", "Expense", "Category", "Method"];
             const tableRows = filteredRecords.map(r => [
-                r.date, 
+                formatThaiDate(r.date), // ใช้ฟังก์ชันแปลงวันที่ใน PDF ด้วย
                 r.item, 
                 r.income > 0 ? r.income.toFixed(2) : "-", 
                 r.expense > 0 ? r.expense.toFixed(2) : "-",
@@ -130,16 +137,14 @@ function setupExportPDF() {
                 }
             });
 
-            // >>> ส่วนที่แก้ไข: ตั้งชื่อไฟล์ตามรูปแบบที่ขอ <<<
             const d = new Date();
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear() + 543; // ปี พ.ศ.
+            const year = d.getFullYear() + 543;
             const h = String(d.getHours()).padStart(2, '0');
             const m = String(d.getMinutes()).padStart(2, '0');
             const s = String(d.getSeconds()).padStart(2, '0');
             
-            // Format: my-budget-report_ddmmyyyy-hhmmss.pdf
             const fileNameStr = `my-budget-report_${day}${month}${year}-${h}${m}${s}.pdf`;
             
             doc.save(fileNameStr);
@@ -265,7 +270,11 @@ function renderList() {
     }
 
     displayItems.forEach(r => {
+        // จัดการวันที่และเวลา
+        const thaiDate = formatThaiDate(r.date);
         let timeStr = r.createdAt ? new Date(r.createdAt.seconds*1000).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : "";
+        if(timeStr) timeStr += " น."; // เพิ่มหน่วย น.
+
         const cats = Array.isArray(r.category) ? r.category : [r.category];
         const catHtml = cats.map(c => {
             const col = getColorForCategory(c);
@@ -276,8 +285,7 @@ function renderList() {
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td>
-                <div style="font-weight:600;">${r.date}</div>
+            <td style="text-align:center;"> <div style="font-weight:600;">${thaiDate}</div>
                 <div style="font-size:12px; color:#94a3b8;">${timeStr}</div>
             </td>
             <td>
