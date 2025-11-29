@@ -19,10 +19,9 @@
       --primary: #6366f1;
       --text-main: #1e293b;
       --text-sub: #64748b;
-      --radius: 24px; /* เพิ่มความโค้งมนให้น่ารักขึ้น */
+      --radius: 24px;
     }
 
-    /* บังคับฟอนต์ไทย */
     body, input, select, button, textarea, div, span, h1, p, td, th {
        font-family: "Sarabun", sans-serif;
     }
@@ -34,7 +33,6 @@
       color: var(--text-main);
       min-height: 100vh;
       display: flex; justify-content: center; padding: 20px;
-      /* ปรับพื้นหลังเป็นสีพาสเทลหวานๆ */
       background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
       background-size: 400% 400%;
       animation: gradientBG 15s ease infinite;
@@ -46,55 +44,109 @@
       100% { background-position: 0% 50%; }
     }
 
+    /* =========================================
+       >>> โซน Animation สั่งทำพิเศษ <<<
+       ========================================= */
+    
+    /* 1. หมูเด้งดึ๋งๆ */
+    @keyframes jump {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+    .anim-jump {
+        display: inline-block;
+        animation: jump 1.5s ease-in-out infinite;
+    }
+
+    /* 2. นาฬิกาหมุน */
+    @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .anim-spin {
+        display: inline-block;
+        animation: spin-slow 8s linear infinite;
+    }
+
+    /* 3. ลอยนุ่มๆ */
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+    }
+    .anim-float {
+        display: inline-block;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    /* 4. ส่ายดุ๊กดิ๊ก (ถุงเงิน) */
+    @keyframes wiggle {
+        0%, 100% { transform: rotate(-10deg); }
+        50% { transform: rotate(10deg); }
+    }
+    .anim-wiggle {
+        display: inline-block;
+        animation: wiggle 1s ease-in-out infinite;
+    }
+
+    /* 5. หัวใจเต้น (ตะกร้า) */
+    @keyframes heartbeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.1); }
+        50% { transform: scale(1); }
+        75% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    .anim-beat {
+        display: inline-block;
+        animation: heartbeat 1.5s infinite;
+    }
+
+    /* 6. หมุนพลิก (เพชร) */
+    @keyframes flip-3d {
+        0% { transform: perspective(400px) rotateY(0); }
+        100% { transform: perspective(400px) rotateY(360deg); }
+    }
+    .anim-flip {
+        display: inline-block;
+        animation: flip-3d 5s linear infinite;
+    }
+
+    /* ========================================= */
+
     .glass-container {
       width: 98%;
       max-width: 1800px;
       background: rgba(255, 255, 255, 0.90);
       backdrop-filter: blur(20px);
       border-radius: var(--radius);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.1); /* เงานุ่มขึ้น */
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1);
       padding: 35px;
       display: flex; flex-direction: column; gap: 24px;
       min-height: 95vh;
       border: 2px solid rgba(255, 255, 255, 0.8);
     }
 
-    /* --- Cute Icon Styles --- */
-    .icon-gradient {
-        background: -webkit-linear-gradient(45deg, #FF9A9E, #FECFEF);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        filter: drop-shadow(0 2px 4px rgba(255, 105, 180, 0.3));
-    }
-    
+    /* Icon Colors */
     .icon-piggy {
         background: -webkit-linear-gradient(45deg, #ff758c, #ff7eb3);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-
     .icon-money {
         background: -webkit-linear-gradient(45deg, #11998e, #38ef7d);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-
     .icon-shop {
         background: -webkit-linear-gradient(45deg, #ff9966, #ff5e62);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-
     .icon-gem {
         background: -webkit-linear-gradient(45deg, #2193b0, #6dd5ed);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-    /* ------------------------ */
 
     .top-bar {
         display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;
-        margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; /* เส้นประดูน่ารักกว่า */
+        margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1;
         padding-bottom: 20px;
     }
     .brand-section h1 { margin: 0; font-size: 32px; color: var(--primary); font-weight: 800; display:flex; align-items:center; gap:15px; }
@@ -102,7 +154,7 @@
     
     .live-info-card {
         display: flex; gap: 20px; align-items: center;
-        background: #fff; padding: 12px 28px; border-radius: 50px; /* ทรงแคปซูล */
+        background: #fff; padding: 12px 28px; border-radius: 50px;
         border: 2px solid #eef2ff;
         box-shadow: 0 4px 15px rgba(148, 163, 184, 0.1);
     }
@@ -124,12 +176,10 @@
       transition: transform 0.3s;
     }
     .stat-box:hover { transform: translateY(-5px); }
-
     .stat-info { display: flex; flex-direction: column; }
     .stat-label { font-size: 14px; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; }
     .stat-val { font-size: 28px; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
     
-    /* กล่องไอคอนใหญ่ขึ้นและกลม */
     .stat-icon-bg { 
         width: 65px; height: 65px; border-radius: 50%; 
         display: flex; align-items: center; justify-content: center; font-size: 32px; 
@@ -222,7 +272,7 @@
     <header class="top-bar">
       <div class="brand-section">
         <h1>
-            <i class="fa-solid fa-piggy-bank fa-bounce icon-piggy" style="--fa-animation-duration: 2s;"></i> 
+            <i class="fa-solid fa-piggy-bank anim-jump icon-piggy"></i> 
             <span style="background: -webkit-linear-gradient(45deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">My Budget</span>
         </h1>
         <p>Dashboard จัดการรายรับ-รายจ่ายส่วนตัว (Cute Edition ✨)</p>
@@ -231,7 +281,7 @@
         <div class="info-item">
             <span class="info-label">เวลาปัจจุบัน</span>
             <div class="info-value" id="clock-display" style="color:#6366f1;">
-                <i class="fa-solid fa-clock fa-spin" style="--fa-animation-duration: 10s;"></i> --:--:--
+                <i class="fa-solid fa-clock anim-spin"></i> --:--:--
             </div>
             <div style="font-size:12px; color:#64748b;" id="date-display">...</div>
         </div>
@@ -239,7 +289,7 @@
         <div class="info-item">
             <span class="info-label">สภาพอากาศ</span>
             <div class="info-value" id="weather-display">
-                <span class="weather-icon fa-bounce" style="--fa-animation-duration: 3s; display:inline-block;">⛅</span> 
+                <span class="weather-icon anim-float" style="display:inline-block;">⛅</span> 
                 <span id="temp-val">--</span>°C
             </div>
             <div style="font-size:12px; color:#64748b;" id="location-name">กำลังโหลด...</div>
@@ -290,7 +340,7 @@
                     </div>
                     <div style="display:flex; gap:10px; margin-top:10px;">
                         <button type="reset" class="btn-sec"><i class="fa-solid fa-eraser"></i> ล้างค่า</button>
-                        <button type="submit" class="btn-main"><i class="fa-solid fa-floppy-disk fa-bounce"></i> บันทึกข้อมูล</button>
+                        <button type="submit" class="btn-main"><i class="fa-solid fa-floppy-disk anim-beat"></i> บันทึกข้อมูล</button>
                     </div>
                 </form>
             </section>
@@ -303,21 +353,21 @@
                       <span class="stat-label">รายรับทั้งหมด</span>
                       <span class="stat-val val-inc" id="sum-income">0.00</span>
                   </div>
-                  <div class="stat-icon-bg bg-inc"><i class="fa-solid fa-sack-dollar fa-shake icon-money" style="--fa-animation-duration: 2.5s;"></i></div>
+                  <div class="stat-icon-bg bg-inc"><i class="fa-solid fa-sack-dollar anim-wiggle icon-money"></i></div>
                 </div>
                 <div class="stat-box">
                   <div class="stat-info">
                       <span class="stat-label">รายจ่ายทั้งหมด</span>
                       <span class="stat-val val-exp" id="sum-expense">0.00</span>
                   </div>
-                  <div class="stat-icon-bg bg-exp"><i class="fa-solid fa-cart-shopping fa-beat icon-shop" style="--fa-animation-duration: 2s;"></i></div>
+                  <div class="stat-icon-bg bg-exp"><i class="fa-solid fa-cart-shopping anim-beat icon-shop"></i></div>
                 </div>
                 <div class="stat-box">
                    <div class="stat-info">
                       <span class="stat-label">คงเหลือสุทธิ</span>
                       <span class="stat-val val-net" id="sum-net">0.00</span>
                    </div>
-                   <div class="stat-icon-bg bg-net"><i class="fa-solid fa-gem fa-flip icon-gem" style="--fa-animation-duration: 4s;"></i></div>
+                   <div class="stat-icon-bg bg-net"><i class="fa-solid fa-gem anim-flip icon-gem"></i></div>
                 </div>
             </div>
 
