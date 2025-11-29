@@ -11,12 +11,12 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.0.1 (Fixed)",
+    version: "v1.0.2",
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
-// ฟังก์ชันแปลงตัวเลข (ใส่คอมม่า) - ย้ายมาไว้บนสุดกันหาไม่เจอ
+// ฟังก์ชันแปลงตัวเลข (ใส่คอมม่า)
 function formatNumber(n) { 
     if (n === undefined || n === null || isNaN(n)) return "0.00";
     return Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); 
@@ -32,7 +32,7 @@ function formatThaiDate(dateString) {
     } catch(e) { return dateString; }
 }
 
-// ฟังก์ชันเลือกสีหมวดหมู่ (แบบปลอดภัย ไม่พังแม้ชื่อว่าง)
+// ฟังก์ชันเลือกสีหมวดหมู่
 function getColorForCategory(name) {
     const palettes = [{ bg: "#eef2ff", text: "#4338ca" }, { bg: "#f0fdf4", text: "#15803d" }, { bg: "#fff7ed", text: "#c2410c" }, { bg: "#fdf2f8", text: "#be185d" }];
     if (!name || typeof name !== 'string') return palettes[0];
@@ -316,9 +316,19 @@ function setupExportPDF() {
                 doc.text(`${APP_INFO.credit} | Copyright © ${APP_INFO.copyrightYear}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
                 doc.text(`หน้าที่ ${i} จาก ${pageCount}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
             }
+            
+            // >>> ตั้งชื่อไฟล์ใหม่ตามที่ขอ: my-budget-report_ddmmyyyy_hhmmss.pdf <<<
             const d = new Date();
-            const fileNameStr = `my-budget_${d.getDate()}${d.getMonth()+1}${d.getFullYear()+543}.pdf`;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear() + 543;
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            
+            const fileNameStr = `my-budget-report_${day}${month}${year}_${h}${m}${s}.pdf`;
             doc.save(fileNameStr);
+
         } catch (err) { console.error(err); alert(`Error: ${err.message}`); } 
         finally { btn.innerHTML = originalText; btn.disabled = false; }
     });
@@ -343,7 +353,6 @@ function applyFilters() {
     currentPage = 1; renderList(); updateSummary();
 }
 
-// >>> ส่วนแสดงผลที่ปรับปรุงให้แข็งแกร่ง <<<
 function renderList() {
     const container = document.getElementById("table-body");
     container.innerHTML = "";
@@ -365,7 +374,6 @@ function renderList() {
     }
 
     displayItems.forEach(r => {
-        // ใช้ Try-Catch กันจอขาวถ้าข้อมูลบรรทัดไหนพัง
         try {
             const thaiDate = formatThaiDate(r.date) || "-";
             let timeStr = "";
@@ -377,7 +385,6 @@ function renderList() {
             const incVal = incomeNum > 0 ? `+${formatNumber(incomeNum)}` : "-";
             const expVal = expenseNum > 0 ? `-${formatNumber(expenseNum)}` : "-";
             
-            // กัน Error กรณีหมวดหมู่เป็น Null
             const cats = Array.isArray(r.category) ? r.category : [r.category || "ทั่วไป"];
             const catHtml = cats.map(c => {
                 const col = getColorForCategory(c);
@@ -430,7 +437,7 @@ function updateSummary() {
     const net = inc - exp;
     const netEl = document.getElementById("sum-net");
     netEl.innerText = formatNumber(net);
-    netEl.style.color = net >= 0 ? '#0284c7' : '#e11d48'; // สีฟ้า/แดง ตาม CSS ใหม่
+    netEl.style.color = net >= 0 ? '#0284c7' : '#e11d48';
 }
 
 function setupEventListeners() {
