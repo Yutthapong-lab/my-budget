@@ -23,13 +23,27 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.2", // Update Version
+    version: "v1.1.3", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
 // ⚠️ [สำคัญ] เปลี่ยนตรงนี้เป็นอีเมลของคุณ
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
+
+// ฟังก์ชันช่วย Reset Eye View (ปิดตา)
+function resetEyeView() {
+    const passInput = document.getElementById('login-pass');
+    const toggleIcon = document.getElementById('toggle-password');
+    
+    if (passInput) {
+        passInput.setAttribute('type', 'password'); // บังคับให้เป็น password (ซ่อน)
+    }
+    if (toggleIcon) {
+        toggleIcon.classList.remove('fa-eye-slash'); // เอาขีดฆ่าออก
+        toggleIcon.classList.add('fa-eye'); // ใส่รูปตาปกติ
+    }
+}
 
 // ฟังก์ชันแปลงตัวเลข
 function formatNumber(n) { 
@@ -119,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if(fVer) fVer.innerText = versionText;
 
-            // ไปที่ Collection ส่วนตัว
             recordsCol = collection(db, "users", user.uid, "records");
             await loadMasterData();
             const dateInput = document.getElementById('date');
@@ -141,10 +154,11 @@ document.addEventListener('DOMContentLoaded', () => {
             allRecords = [];
             recordsCol = null;
 
-            // สั่งล้างช่อง Input ทุกครั้งที่สถานะเป็น Logout
+            // สั่งล้างช่อง Input และปิดตา ทุกครั้งที่สถานะเป็น Logout
             if(document.getElementById('login-email')) document.getElementById('login-email').value = "";
             if(document.getElementById('login-pass')) document.getElementById('login-pass').value = "";
             if(document.getElementById('login-error')) document.getElementById('login-error').innerText = "";
+            resetEyeView(); // เรียกฟังก์ชันปิดตา
         }
     });
 
@@ -174,7 +188,7 @@ function setupAuthListeners() {
     const emailInput = document.getElementById('login-email');
     const passInput = document.getElementById('login-pass');
 
-    // ฟังก์ชันปุ่ม Reset
+    // >>> [UPDATE Fix 1] ฟังก์ชันปุ่ม Reset (ยางลบ) <<<
     const btnResetLogin = document.getElementById('btn-reset-login');
     if (btnResetLogin) {
         btnResetLogin.addEventListener('click', () => {
@@ -182,6 +196,7 @@ function setupAuthListeners() {
             passInput.value = "";
             errDiv.innerText = "";
             emailInput.focus();
+            resetEyeView(); // บังคับปิดตาเมื่อกด Reset
         });
     }
 
@@ -195,15 +210,8 @@ function setupAuthListeners() {
             emailInput.value = "";
             passInput.value = "";
 
-            // >>> [UPDATE 3] Reset Eye View เมื่อสลับโหมด <<<
-            // บังคับให้ type กลับเป็น password (ซ่อน)
-            passInput.setAttribute('type', 'password');
-            // รีเซ็ตไอคอนกลับเป็นรูปตาปกติ (fa-eye) เอาขีดฆ่าออก (fa-eye-slash)
-            const toggleIcon = document.getElementById('toggle-password');
-            if (toggleIcon) {
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
-            }
+            // >>> [UPDATE Fix 1] Reset Eye View เมื่อสลับโหมด <<<
+            resetEyeView(); // บังคับปิดตาเมื่อสลับโหมด
 
             if (isRegisterMode) {
                 authTitle.innerText = "สมัครสมาชิกใหม่";
@@ -641,11 +649,12 @@ function setupEventListeners() {
             if (expenseVal > 0 && currentTotalIncome <= 0) {
                 alert("⚠️ ไม่สามารถบันทึกรายจ่ายได้ เนื่องจากยอดรายรับรวมยังเป็น 0 ครับ \nกรุณาบันทึกรายรับก่อนครับ");
                 
-                // >>> [UPDATE 4] เคลียร์ข้อมูลช่องตัวเลขเมื่อติด Alert และปลดล็อกช่อง <<<
+                // >>> [UPDATE Fix 2] เคลียร์ข้อมูลและปลดล็อกช่องตัวเลข <<<
                 inc.value = "";
                 exp.value = "";
                 inc.disabled = false;
                 exp.disabled = false;
+                inc.focus(); // นำเคอร์เซอร์ไปช่องรายรับให้
                 return;
             }
 
