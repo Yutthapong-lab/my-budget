@@ -182,7 +182,12 @@
               <input type="password" id="login-pass" class="std-input" placeholder="รหัสผ่าน" required style="padding-right: 40px;" autocomplete="current-password">
               <i id="toggle-password" class="fa-solid fa-eye" style="position: absolute; right: 15px; top: 38%; cursor: pointer; color: #94a3b8;"></i>
           </div>
-          <button type="submit" id="auth-btn" class="login-btn">เข้าใช้งาน</button>
+          <div style="display:flex; gap:10px;">
+    <button type="submit" id="auth-btn" class="login-btn" style="flex:1;">เข้าใช้งาน</button>
+    <button type="button" id="btn-reset-login" class="login-btn" style="flex:0 0 60px; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; box-shadow:none;" title="ล้างค่า">
+        <i class="fa-solid fa-eraser"></i>
+    </button>
+</div>
       </form>
       
       <div id="login-error" style="color:red; font-size:13px; margin-top:10px;"></div>
@@ -378,3 +383,4 @@
   <script type="module" src="main.js"></script>
 </body>
 </html>
+
