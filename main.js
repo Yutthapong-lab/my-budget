@@ -1,4 +1,4 @@
-// --- main.js (Updated: Forgot Password Modal) ---
+// --- main.js (v1.2.1 - Clean Delete All Data) ---
 import { db } from "./firebase-config.js";
 
 import { 
@@ -16,7 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 
 import { 
-    collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp 
+    collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp, writeBatch 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
 // ==========================================
@@ -24,7 +24,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.2.0", // Update Version
+    version: "v1.2.1", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -198,14 +198,13 @@ function setupAuthListeners() {
         });
     }
 
-    // >>> START: NEW FORGOT PASSWORD LOGIC (MODAL) <<<
+    // >>> Forgot Password Logic (Modal) <<<
     const btnForgot = document.getElementById('btn-forgot-pass');
     const modalForgot = document.getElementById('modal-forgot-pass');
     const forgotEmailInput = document.getElementById('forgot-email-input');
     const btnCancelReset = document.getElementById('btn-cancel-reset');
     const btnConfirmReset = document.getElementById('btn-confirm-reset');
 
-    // ฟังก์ชันเปิด/ปิด Modal
     const toggleModal = (show) => {
         if (show) {
             modalForgot.style.display = 'flex';
@@ -218,42 +217,21 @@ function setupAuthListeners() {
         }
     };
 
-    // Event: กดปุ่ม "ลืมรหัสผ่าน?"
-    if (btnForgot) {
-        btnForgot.addEventListener('click', () => toggleModal(true));
-    }
+    if (btnForgot) btnForgot.addEventListener('click', () => toggleModal(true));
+    if (btnCancelReset) btnCancelReset.addEventListener('click', () => toggleModal(false));
+    if (modalForgot) modalForgot.addEventListener('click', (e) => { if (e.target === modalForgot) toggleModal(false); });
 
-    // Event: กดปุ่ม "ยกเลิก"
-    if (btnCancelReset) {
-        btnCancelReset.addEventListener('click', () => toggleModal(false));
-    }
-
-    // Event: กดพื้นหลังเพื่อปิด
-    if (modalForgot) {
-        modalForgot.addEventListener('click', (e) => {
-            if (e.target === modalForgot) toggleModal(false);
-        });
-    }
-
-    // Event: กดปุ่ม "ส่งลิงก์" เพื่อรีเซ็ต
     if (btnConfirmReset) {
         btnConfirmReset.addEventListener('click', async () => {
             const email = forgotEmailInput.value.trim();
-            
-            if (!email) {
-                alert("⚠️ กรุณากรอกอีเมลก่อนครับ");
-                forgotEmailInput.focus();
-                return;
-            }
-
+            if (!email) { alert("⚠️ กรุณากรอกอีเมลก่อนครับ"); forgotEmailInput.focus(); return; }
             const originalText = btnConfirmReset.innerHTML;
             btnConfirmReset.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่ง...';
             btnConfirmReset.disabled = true;
-
             try {
                 await sendPasswordResetEmail(auth, email);
                 toggleModal(false); 
-                alert(`✅ ส่งลิงก์รีเซ็ตรหัสผ่านไปยัง:\n${email}\n\nเรียบร้อยแล้ว! กรุณาตรวจสอบ Email (รวมถึง Junk/Spam)`);
+                alert(`✅ ส่งลิงก์เรียบร้อยแล้ว!\nกรุณาตรวจสอบ Email (รวมถึง Junk/Spam)`);
             } catch (error) {
                 console.error(error);
                 let msg = "ส่งไม่สำเร็จ: " + error.message;
@@ -267,28 +245,19 @@ function setupAuthListeners() {
             }
         });
     }
-    // >>> END: NEW FORGOT PASSWORD LOGIC <<<
 
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             isRegisterMode = !isRegisterMode; 
-            errDiv.innerText = ""; 
-            emailInput.value = "";
-            passInput.value = "";
-            resetEyeView(); 
-
+            errDiv.innerText = ""; emailInput.value = ""; passInput.value = ""; resetEyeView(); 
             if (isRegisterMode) {
-                authTitle.innerText = "สมัครสมาชิกใหม่";
-                authBtn.innerText = "ลงทะเบียน";
-                switchText.innerText = "มีบัญชีอยู่แล้ว?";
-                switchBtn.innerText = "เข้าสู่ระบบ";
+                authTitle.innerText = "สมัครสมาชิกใหม่"; authBtn.innerText = "ลงทะเบียน";
+                switchText.innerText = "มีบัญชีอยู่แล้ว?"; switchBtn.innerText = "เข้าสู่ระบบ";
                 authBtn.style.background = "#10b981"; 
                 if(btnForgot) btnForgot.parentElement.style.display = 'none';
             } else {
-                authTitle.innerText = "เข้าสู่ระบบ";
-                authBtn.innerText = "เข้าใช้งาน";
-                switchText.innerText = "ยังไม่มีบัญชี?";
-                switchBtn.innerText = "สมัครสมาชิก";
+                authTitle.innerText = "เข้าสู่ระบบ"; authBtn.innerText = "เข้าใช้งาน";
+                switchText.innerText = "ยังไม่มีบัญชี?"; switchBtn.innerText = "สมัครสมาชิก";
                 authBtn.style.background = "var(--primary)"; 
                 if(btnForgot) btnForgot.parentElement.style.display = 'block';
             }
@@ -302,11 +271,8 @@ function setupAuthListeners() {
             const pass = passInput.value;
             errDiv.innerText = "กำลังตรวจสอบ...";
             try {
-                if (isRegisterMode) {
-                    await createUserWithEmailAndPassword(auth, email, pass);
-                } else {
-                    await signInWithEmailAndPassword(auth, email, pass);
-                }
+                if (isRegisterMode) await createUserWithEmailAndPassword(auth, email, pass);
+                else await signInWithEmailAndPassword(auth, email, pass);
                 errDiv.innerText = "";
             } catch (error) {
                 console.error(error);
@@ -315,7 +281,7 @@ function setupAuthListeners() {
                 else if(error.code === 'auth/weak-password') msg = "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
                 else if(error.code === 'auth/invalid-email') msg = "รูปแบบอีเมลไม่ถูกต้อง";
                 else if(error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') msg = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
-                else if(error.code === 'auth/too-many-requests') msg = "กรอกรหัสผิดบ่อยเกินไป กรุณารอสักครู่";
+                else if(error.code === 'auth/too-many-requests') msg = "กรอกรหัสผิดบ่อยเกินไป";
                 errDiv.innerText = msg;
             }
         });
@@ -324,13 +290,11 @@ function setupAuthListeners() {
     const logoutBtn = document.getElementById('btn-logout');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
-            if(confirm("ออกจากระบบ?")) {
-                signOut(auth).then(() => console.log("Logged out"));
-            }
+            if(confirm("ออกจากระบบ?")) signOut(auth).then(() => console.log("Logged out"));
         });
     }
 
-    // Delete Account with Email Confirmation
+    // >>> [UPDATED] Delete Account & ALL Data <<<
     const deleteAccBtn = document.getElementById('btn-delete-account');
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
@@ -341,28 +305,59 @@ function setupAuthListeners() {
             
             if (confirmMsg === user.email) {
                 try {
-                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบ...';
+                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบข้อมูล...';
                     deleteAccBtn.disabled = true;
+
+                    // 1. ลบ Sub-collection "records" ทั้งหมด
                     if (recordsCol) {
                         const snapshot = await getDocs(recordsCol);
-                        if (!snapshot.empty) {
-                            await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
+                        // ใช้ writeBatch เพื่อประสิทธิภาพที่ดีกว่า (ถ้าข้อมูลเยอะ)
+                        const batch = writeBatch(db);
+                        let count = 0;
+                        
+                        snapshot.forEach(doc => {
+                            batch.delete(doc.ref);
+                            count++;
+                        });
+
+                        if (count > 0) {
+                            await batch.commit(); // สั่งลบทีเดียว
                         }
                     }
+
+                    // 2. ลบ Parent Document (users/{uid})
+                    await deleteDoc(doc(db, "users", user.uid));
+
+                    // 3. ลบ User Account ใน Authentication
                     await deleteUser(user);
-                    alert("ลบบัญชีเรียบร้อยแล้ว");
+                    
+                    alert("✅ ลบบัญชีและข้อมูลทั้งหมดเรียบร้อยแล้ว");
+                    // หน้าเว็บจะรีเซ็ตเองเพราะ auth state เปลี่ยน
+
                 } catch (error) {
                     console.error("Delete Error:", error);
+                    // กรณีต้อง Login ใหม่ (Re-authentication)
                     if (error.code === 'auth/requires-recent-login') {
                         const password = prompt("เพื่อความปลอดภัย กรุณากรอกรหัสผ่านเพื่อยืนยันการลบ:");
                         if (password) {
                             try {
                                 await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+                                // ลองลบใหม่หลังจากยืนยันตัวตนแล้ว (ทำซ้ำขั้นตอนเดิม)
+                                const snapshot = await getDocs(recordsCol);
+                                const batch = writeBatch(db);
+                                snapshot.forEach(d => batch.delete(d.ref));
+                                if (!snapshot.empty) await batch.commit();
+                                await deleteDoc(doc(db, "users", user.uid));
                                 await deleteUser(user);
-                                alert("ลบบัญชีเรียบร้อยแล้ว");
-                            } catch (reAuthErr) { alert("รหัสผ่านไม่ถูกต้อง หรือเกิดข้อผิดพลาด: " + reAuthErr.message); }
+                                alert("✅ ลบบัญชีและข้อมูลทั้งหมดเรียบร้อยแล้ว");
+                            } catch (reAuthErr) { 
+                                alert("รหัสผ่านไม่ถูกต้อง หรือเกิดข้อผิดพลาด: " + reAuthErr.message); 
+                            }
                         }
-                    } else { alert("เกิดข้อผิดพลาด: " + error.message); }
+                    } else { 
+                        alert("เกิดข้อผิดพลาด: " + error.message); 
+                    }
+                    // คืนค่าปุ่มหากลบไม่สำเร็จ
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
                     deleteAccBtn.disabled = false;
                 }
