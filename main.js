@@ -1,4 +1,4 @@
-// --- main.js (v1.2.1 - Clean Delete All Data) ---
+// --- main.js (v1.2.3 - Delete with Progress Modal) ---
 import { db } from "./firebase-config.js";
 
 import { 
@@ -16,7 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 
 import { 
-    collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp, writeBatch 
+    collection, addDoc, deleteDoc, updateDoc, doc, query, orderBy, onSnapshot, getDocs, serverTimestamp, writeBatch, limit 
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
 // ==========================================
@@ -24,14 +24,13 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.2.1", // Update Version
+    version: "v1.2.3", // Progress Modal Edition
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
 
 const ADMIN_EMAIL = "yutthapong.guide@gmail.com"; 
 
-// ฟังก์ชันตั้งวันที่เป็นปัจจุบัน (ตามเวลาเครื่อง)
 function setCurrentDate() {
     const dateInput = document.getElementById("date");
     if (dateInput) {
@@ -121,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fVer = document.getElementById('footer-version');
 
         if (user) {
+            // User Logged In
             loginSection.style.display = 'none';
             dashboardSection.style.display = 'flex';
             footer.style.display = 'flex';
@@ -144,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchWeather();
             setupExportPDF();
         } else {
+            // User Logged Out (or Deleted)
             loginSection.style.display = 'block';
             dashboardSection.style.display = 'none';
             footer.style.display = 'none';
@@ -198,14 +199,14 @@ function setupAuthListeners() {
         });
     }
 
-    // >>> Forgot Password Logic (Modal) <<<
+    // Modal: ลืมรหัสผ่าน
     const btnForgot = document.getElementById('btn-forgot-pass');
     const modalForgot = document.getElementById('modal-forgot-pass');
     const forgotEmailInput = document.getElementById('forgot-email-input');
     const btnCancelReset = document.getElementById('btn-cancel-reset');
     const btnConfirmReset = document.getElementById('btn-confirm-reset');
 
-    const toggleModal = (show) => {
+    const toggleForgotModal = (show) => {
         if (show) {
             modalForgot.style.display = 'flex';
             setTimeout(() => modalForgot.classList.add('show'), 10);
@@ -217,9 +218,9 @@ function setupAuthListeners() {
         }
     };
 
-    if (btnForgot) btnForgot.addEventListener('click', () => toggleModal(true));
-    if (btnCancelReset) btnCancelReset.addEventListener('click', () => toggleModal(false));
-    if (modalForgot) modalForgot.addEventListener('click', (e) => { if (e.target === modalForgot) toggleModal(false); });
+    if (btnForgot) btnForgot.addEventListener('click', () => toggleForgotModal(true));
+    if (btnCancelReset) btnCancelReset.addEventListener('click', () => toggleForgotModal(false));
+    if (modalForgot) modalForgot.addEventListener('click', (e) => { if (e.target === modalForgot) toggleForgotModal(false); });
 
     if (btnConfirmReset) {
         btnConfirmReset.addEventListener('click', async () => {
@@ -230,7 +231,7 @@ function setupAuthListeners() {
             btnConfirmReset.disabled = true;
             try {
                 await sendPasswordResetEmail(auth, email);
-                toggleModal(false); 
+                toggleForgotModal(false); 
                 alert(`✅ ส่งลิงก์เรียบร้อยแล้ว!\nกรุณาตรวจสอบ Email (รวมถึง Junk/Spam)`);
             } catch (error) {
                 console.error(error);
@@ -294,75 +295,146 @@ function setupAuthListeners() {
         });
     }
 
-    // >>> [UPDATED] Delete Account & ALL Data <<<
+    // ========================================================
+    // >>> ฟังก์ชันลบบัญชี แบบมี Progress UI (Smart Wipe) <<<
+    // ========================================================
     const deleteAccBtn = document.getElementById('btn-delete-account');
+    
+    // UI Elements for Delete Modal
+    const modalDel = document.getElementById('modal-delete-progress');
+    const delIconBox = document.getElementById('del-icon-container');
+    const delTitle = document.getElementById('del-title');
+    const delBar = document.getElementById('del-progress-bar');
+    const delStatus = document.getElementById('del-status-text');
+    const btnDelComplete = document.getElementById('btn-delete-complete');
+
+    // Helper: Update Modal State
+    const updateDelProgress = (percent, text) => {
+        if(delBar) delBar.style.width = `${percent}%`;
+        if(delStatus) delStatus.innerText = text;
+    };
+
+    // Helper: Show Delete Modal
+    const showDeleteModal = () => {
+        if(modalDel) {
+            modalDel.style.display = 'flex';
+            setTimeout(() => modalDel.classList.add('show'), 10);
+            
+            // Reset State
+            updateDelProgress(0, "เตรียมการลบข้อมูล...");
+            if(delIconBox) delIconBox.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary);"></i>';
+            if(delTitle) delTitle.innerText = "กำลังลบข้อมูล...";
+            if(btnDelComplete) btnDelComplete.style.display = 'none';
+        }
+    };
+
+    // Helper: Show Success State
+    const showDeleteSuccess = () => {
+        updateDelProgress(100, "ลบข้อมูลทั้งหมดเรียบร้อยแล้ว");
+        if(delIconBox) {
+            delIconBox.innerHTML = '<i class="fa-solid fa-circle-check anim-success" style="color: #10b981;"></i>';
+        }
+        if(delTitle) delTitle.innerText = "ดำเนินการสำเร็จ!";
+        if(btnDelComplete) {
+            btnDelComplete.style.display = 'inline-flex';
+            // ปุ่มนี้กดแล้วจะปิด Modal (ซึ่งตอนนั้นหน้าเว็บคงเด้งไปหน้า Login แล้วจาก onAuthStateChanged)
+            btnDelComplete.onclick = () => {
+                modalDel.classList.remove('show');
+                setTimeout(() => modalDel.style.display = 'none', 300);
+            };
+        }
+    };
+
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
             const user = auth.currentUser;
             if (!user) return;
 
-            const confirmMsg = prompt(`⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้!\n\nหากยืนยันจะลบ กรุณาพิมพ์อีเมลของท่าน:\n👉 ${user.email} \n\nลงในช่องข้างล่าง:`);
+            const confirmMsg = prompt(`⚠️ ยืนยันการลบบัญชีและข้อมูลทั้งหมด!\n\nพิมพ์อีเมลของท่านเพื่อยืนยัน:\n👉 ${user.email}`);
             
             if (confirmMsg === user.email) {
+                // 1. เริ่มแสดง Popup
+                showDeleteModal();
+
                 try {
-                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบข้อมูล...';
-                    deleteAccBtn.disabled = true;
-
-                    // 1. ลบ Sub-collection "records" ทั้งหมด
+                    // --- PHASE 1: ลบ Records (Batch Loop) ---
+                    updateDelProgress(10, "กำลังค้นหาและลบรายการบันทึก...");
+                    
                     if (recordsCol) {
-                        const snapshot = await getDocs(recordsCol);
-                        // ใช้ writeBatch เพื่อประสิทธิภาพที่ดีกว่า (ถ้าข้อมูลเยอะ)
-                        const batch = writeBatch(db);
-                        let count = 0;
-                        
-                        snapshot.forEach(doc => {
-                            batch.delete(doc.ref);
-                            count++;
-                        });
+                        let totalDeleted = 0;
+                        while (true) {
+                            const snapshot = await getDocs(query(recordsCol, limit(500)));
+                            if (snapshot.empty) break;
 
-                        if (count > 0) {
-                            await batch.commit(); // สั่งลบทีเดียว
+                            const batch = writeBatch(db);
+                            snapshot.forEach(doc => batch.delete(doc.ref));
+                            await batch.commit();
+
+                            totalDeleted += snapshot.size;
+                            // ขยับหลอดเล่นๆ ให้ดูเหมือนทำงาน (10% -> 70%)
+                            let fakeProgress = 10 + Math.min(60, (totalDeleted / 10)); 
+                            updateDelProgress(fakeProgress, `ลบรายการแล้ว ${totalDeleted} รายการ...`);
                         }
                     }
 
-                    // 2. ลบ Parent Document (users/{uid})
+                    // --- PHASE 2: ลบ User Profile ---
+                    updateDelProgress(80, "กำลังลบข้อมูลโปรไฟล์ผู้ใช้...");
                     await deleteDoc(doc(db, "users", user.uid));
-
-                    // 3. ลบ User Account ใน Authentication
+                    
+                    // --- PHASE 3: ลบ Auth ---
+                    updateDelProgress(90, "กำลังลบบัญชีออกจากระบบ...");
                     await deleteUser(user);
                     
-                    alert("✅ ลบบัญชีและข้อมูลทั้งหมดเรียบร้อยแล้ว");
-                    // หน้าเว็บจะรีเซ็ตเองเพราะ auth state เปลี่ยน
+                    // --- FINISH ---
+                    showDeleteSuccess();
 
                 } catch (error) {
                     console.error("Delete Error:", error);
-                    // กรณีต้อง Login ใหม่ (Re-authentication)
+
+                    // กรณีต้อง Login ใหม่
                     if (error.code === 'auth/requires-recent-login') {
-                        const password = prompt("เพื่อความปลอดภัย กรุณากรอกรหัสผ่านเพื่อยืนยันการลบ:");
+                        // ปิด Modal เดิมก่อนเพื่อถามรหัส
+                        modalDel.classList.remove('show');
+                        setTimeout(() => modalDel.style.display = 'none', 300);
+
+                        const password = prompt("🔒 ระบบต้องการยืนยันรหัสผ่านครั้งสุดท้ายก่อนลบ:");
                         if (password) {
                             try {
+                                showDeleteModal(); // เปิด Modal อีกรอบ
+                                updateDelProgress(5, "กำลังยืนยันตัวตน...");
+                                
                                 await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
-                                // ลองลบใหม่หลังจากยืนยันตัวตนแล้ว (ทำซ้ำขั้นตอนเดิม)
-                                const snapshot = await getDocs(recordsCol);
-                                const batch = writeBatch(db);
-                                snapshot.forEach(d => batch.delete(d.ref));
-                                if (!snapshot.empty) await batch.commit();
+                                
+                                // ทำซ้ำ Process เดิม
+                                updateDelProgress(20, "ยืนยันสำเร็จ! กำลังลบข้อมูล...");
+                                if (recordsCol) {
+                                    while (true) {
+                                        const snapshot = await getDocs(query(recordsCol, limit(500)));
+                                        if (snapshot.empty) break;
+                                        const batch = writeBatch(db);
+                                        snapshot.forEach(d => batch.delete(d.ref));
+                                        await batch.commit();
+                                    }
+                                }
+                                updateDelProgress(80, "ลบโปรไฟล์...");
                                 await deleteDoc(doc(db, "users", user.uid));
+                                updateDelProgress(95, "ลบบัญชี...");
                                 await deleteUser(user);
-                                alert("✅ ลบบัญชีและข้อมูลทั้งหมดเรียบร้อยแล้ว");
+                                
+                                showDeleteSuccess();
+
                             } catch (reAuthErr) { 
-                                alert("รหัสผ่านไม่ถูกต้อง หรือเกิดข้อผิดพลาด: " + reAuthErr.message); 
+                                alert("❌ รหัสผ่านไม่ถูกต้อง หรือเกิดข้อผิดพลาด: " + reAuthErr.message); 
+                                modalDel.style.display = 'none'; // ปิดถ้าพัง
                             }
                         }
                     } else { 
-                        alert("เกิดข้อผิดพลาด: " + error.message); 
+                        alert("❌ เกิดข้อผิดพลาด: " + error.message);
+                        modalDel.style.display = 'none'; // ปิดถ้าพัง
                     }
-                    // คืนค่าปุ่มหากลบไม่สำเร็จ
-                    deleteAccBtn.innerHTML = '<i class="fa-solid fa-user-xmark"></i> ลบบัญชีถาวร';
-                    deleteAccBtn.disabled = false;
                 }
             } else if (confirmMsg !== null) {
-                alert("⛔ อีเมลไม่ถูกต้อง การลบถูกยกเลิก");
+                alert("⛔ อีเมลไม่ถูกต้อง ยกเลิกรายการ");
             }
         });
     }
