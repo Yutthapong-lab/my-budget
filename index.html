@@ -14,6 +14,26 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
   <style>
+    /* --- เพิ่ม CSS สำหรับ Modal Popup --- */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
+    z-index: 9999; display: none; /* ซ่อนไว้ก่อน */
+    justify-content: center; align-items: center;
+    opacity: 0; transition: opacity 0.3s ease;
+}
+.modal-overlay.show { opacity: 1; }
+
+.modal-box {
+    background: #fff; padding: 30px; width: 90%; max-width: 400px;
+    border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    text-align: center; transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.modal-overlay.show .modal-box { transform: scale(1); }
+
+.modal-icon { font-size: 40px; color: var(--primary); margin-bottom: 15px; }
+.modal-title { font-size: 20px; font-weight: 800; color: #334155; margin-bottom: 10px; }
+.modal-desc { font-size: 14px; color: #64748b; margin-bottom: 20px; }
     :root { --primary: #6366f1; --text-main: #1e293b; --text-sub: #64748b; --radius: 24px; }
     body, input, select, button, textarea, div, span, h1, p, td, th { font-family: "Sarabun", sans-serif; }
     * { box-sizing: border-box; outline: none; }
@@ -414,8 +434,25 @@
     </div>
 
   </div>
+<div id="modal-forgot-pass" class="modal-overlay">
+      <div class="modal-box">
+          <div class="modal-icon"><i class="fa-solid fa-unlock-keyhole fa-bounce"></i></div>
+          <div class="modal-title">รีเซ็ตรหัสผ่าน</div>
+          <p class="modal-desc">กรุณากรอกอีเมลที่ท่านใช้ลงทะเบียน<br>ระบบจะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้ครับ</p>
+          
+          <input type="email" id="forgot-email-input" class="std-input" placeholder="example@email.com" style="margin-bottom: 20px;">
+          
+          <div style="display: flex; gap: 10px;">
+              <button id="btn-cancel-reset" class="btn-sec" style="flex: 1;">ยกเลิก</button>
+              <button id="btn-confirm-reset" class="btn-main" style="flex: 1;">ส่งลิงก์</button>
+          </div>
+      </div>
+  </div>
 
   <script type="module" src="main.js"></script>
 </body>
+  <script type="module" src="main.js"></script>
+</body>
 </html>
+
 
