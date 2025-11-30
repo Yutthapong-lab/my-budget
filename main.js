@@ -1,4 +1,4 @@
-// --- main.js (v1.1.9 - Delete by Email Confirmation) ---
+// --- main.js (Updated: Forgot Password Modal) ---
 import { db } from "./firebase-config.js";
 
 import { 
@@ -24,7 +24,7 @@ import {
 // ==========================================
 
 const APP_INFO = {
-    version: "v1.1.9", // Update Version
+    version: "v1.2.0", // Update Version
     credit: "Created by Yutthapong R.",
     copyrightYear: "2025"
 };
@@ -198,30 +198,76 @@ function setupAuthListeners() {
         });
     }
 
+    // >>> START: NEW FORGOT PASSWORD LOGIC (MODAL) <<<
     const btnForgot = document.getElementById('btn-forgot-pass');
+    const modalForgot = document.getElementById('modal-forgot-pass');
+    const forgotEmailInput = document.getElementById('forgot-email-input');
+    const btnCancelReset = document.getElementById('btn-cancel-reset');
+    const btnConfirmReset = document.getElementById('btn-confirm-reset');
+
+    // ฟังก์ชันเปิด/ปิด Modal
+    const toggleModal = (show) => {
+        if (show) {
+            modalForgot.style.display = 'flex';
+            setTimeout(() => modalForgot.classList.add('show'), 10);
+            forgotEmailInput.value = ""; 
+            forgotEmailInput.focus();
+        } else {
+            modalForgot.classList.remove('show');
+            setTimeout(() => modalForgot.style.display = 'none', 300);
+        }
+    };
+
+    // Event: กดปุ่ม "ลืมรหัสผ่าน?"
     if (btnForgot) {
-        btnForgot.addEventListener('click', async () => {
-            const email = emailInput.value;
+        btnForgot.addEventListener('click', () => toggleModal(true));
+    }
+
+    // Event: กดปุ่ม "ยกเลิก"
+    if (btnCancelReset) {
+        btnCancelReset.addEventListener('click', () => toggleModal(false));
+    }
+
+    // Event: กดพื้นหลังเพื่อปิด
+    if (modalForgot) {
+        modalForgot.addEventListener('click', (e) => {
+            if (e.target === modalForgot) toggleModal(false);
+        });
+    }
+
+    // Event: กดปุ่ม "ส่งลิงก์" เพื่อรีเซ็ต
+    if (btnConfirmReset) {
+        btnConfirmReset.addEventListener('click', async () => {
+            const email = forgotEmailInput.value.trim();
+            
             if (!email) {
-                alert("⚠️ กรุณากรอก 'อีเมล' ในช่องด้านบน เพื่อรับลิงก์รีเซ็ตรหัสผ่านครับ");
-                emailInput.focus();
+                alert("⚠️ กรุณากรอกอีเมลก่อนครับ");
+                forgotEmailInput.focus();
                 return;
             }
-            if(confirm(`ต้องการส่งลิงก์รีเซ็ตรหัสผ่านไปยัง: ${email} ใช่หรือไม่?`)) {
-                try {
-                    await sendPasswordResetEmail(auth, email);
-                    emailInput.value = ""; 
-                    alert(`✅ ส่งลิงก์เรียบร้อยแล้ว!\nกรุณาตรวจสอบ Email (รวมถึงใน Junk/Spam)\nเพื่อตั้งรหัสผ่านใหม่ครับ`);
-                } catch (error) {
-                    console.error(error);
-                    let msg = "ส่งไม่สำเร็จ: " + error.message;
-                    if (error.code === 'auth/user-not-found') msg = "ไม่พบอีเมลนี้ในระบบ";
-                    else if (error.code === 'auth/invalid-email') msg = "รูปแบบอีเมลไม่ถูกต้อง";
-                    alert(msg);
-                }
+
+            const originalText = btnConfirmReset.innerHTML;
+            btnConfirmReset.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่ง...';
+            btnConfirmReset.disabled = true;
+
+            try {
+                await sendPasswordResetEmail(auth, email);
+                toggleModal(false); 
+                alert(`✅ ส่งลิงก์รีเซ็ตรหัสผ่านไปยัง:\n${email}\n\nเรียบร้อยแล้ว! กรุณาตรวจสอบ Email (รวมถึง Junk/Spam)`);
+            } catch (error) {
+                console.error(error);
+                let msg = "ส่งไม่สำเร็จ: " + error.message;
+                if (error.code === 'auth/user-not-found') msg = "❌ ไม่พบอีเมลนี้ในระบบ";
+                else if (error.code === 'auth/invalid-email') msg = "❌ รูปแบบอีเมลไม่ถูกต้อง";
+                alert(msg);
+                forgotEmailInput.focus();
+            } finally {
+                btnConfirmReset.innerHTML = originalText;
+                btnConfirmReset.disabled = false;
             }
         });
     }
+    // >>> END: NEW FORGOT PASSWORD LOGIC <<<
 
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
@@ -284,7 +330,7 @@ function setupAuthListeners() {
         });
     }
 
-    // >>> [UPDATE] Delete Account with Email Confirmation <<<
+    // Delete Account with Email Confirmation
     const deleteAccBtn = document.getElementById('btn-delete-account');
     if (deleteAccBtn) {
         deleteAccBtn.addEventListener('click', async () => {
@@ -293,7 +339,6 @@ function setupAuthListeners() {
 
             const confirmMsg = prompt(`⚠️ คำเตือน: ข้อมูลทั้งหมดจะถูกลบถาวรและกู้คืนไม่ได้!\n\nหากยืนยันจะลบ กรุณาพิมพ์อีเมลของท่าน:\n👉 ${user.email} \n\nลงในช่องข้างล่าง:`);
             
-            // เช็คว่าพิมพ์อีเมลตรงไหม
             if (confirmMsg === user.email) {
                 try {
                     deleteAccBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบ...';
@@ -691,4 +736,3 @@ function setupEventListeners() {
     
     document.getElementById("page-size")?.addEventListener("change", ()=>{ currentPage=1; renderList(); });
 }
-
